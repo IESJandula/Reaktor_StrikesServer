@@ -16,40 +16,34 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class HuelgaResponseDto 
+public class HuelgaRequestDto 
 {
-    /**
+	   /**
      * Nombre de la huelga.
-     * Identifica de forma única la huelga enviada en la respuesta.
+     * Identifica de forma única la huelga.
      */
-    private String nombre ;
-    
+    private String nombre;
+
     /**
      * Fecha de inicio de la huelga.
      */
-    private Long fechaInicio ;
+    private Long fechaInicio;
+
+    /**
+     * Fecha de fin de la huelga.
+     * Puede ser nula o vacía.
+     */
+    private Long fechaFin;
     
     /**
-     * 
-     * Fecha  fin de la huelga.
+     * Fecha limite de inscripción a la huelga.
      */
-    private Long fechaFin ;
+    private Long fechaLimite;
     
     /**
-     * 
-     * Fecha límite de inscripción de la huelga.
+     * URL del formulario de inscripción.
      */
-    private Long fechaLimite ;
-    
-    /**
-     * Estado en el que se encuentra la huelga.
-     */
-    private String estado;
-    
-    /**
-     * Número de participantes inscritos en la huelga.
-     */
-    private Long numeroParticipantes;
+    private String urlGoogleScript;
 }
 
 

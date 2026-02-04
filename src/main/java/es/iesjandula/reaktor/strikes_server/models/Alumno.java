@@ -1,11 +1,15 @@
 package es.iesjandula.reaktor.strikes_server.models;
 
 
+import java.util.List;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,8 +18,6 @@ import lombok.Setter;
 
 /**
  * Clase que representa a un alumno en la base de datos.
- * Hereda de la clase Persona e incluye información específica 
- * como curso y grupo.
  * 
  * Esta clase está mapeada como entidad JPA a la tabla "alumno".
  * 
@@ -55,10 +57,22 @@ public class Alumno
      * Relación de tipo ManyToOne, donde varios alumnos
      * pueden pertenecer al mismo curso, etapa y grupo.
      */
+    
     @ManyToOne
-    @JoinColumn(name = "curso", referencedColumnName = "curso")
-    @JoinColumn(name = "etapa", referencedColumnName = "etapa")
-    @JoinColumn(name = "grupo", referencedColumnName = "grupo")
+    @JoinColumns({
+        @JoinColumn(name = "curso", referencedColumnName = "curso", nullable = false),
+        @JoinColumn(name = "etapa", referencedColumnName = "etapa", nullable = false),
+        @JoinColumn(name = "grupo", referencedColumnName = "grupo", nullable = false)
+    })
     private CursoEtapaGrupo cursoEtapaGrupo ;
+    
+    /**
+     * Lista de huelgas a las que se ha inscrito el alumno.
+     *
+     * <p>Relación uno-a-muchos gestionada por el atributo
+     * en la entidad Huelga.</p>
+     */
+    @OneToMany(mappedBy = "alumno")
+    private List<AlumnoHuelga> huelgas;
 }
 

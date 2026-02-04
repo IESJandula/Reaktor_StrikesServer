@@ -40,8 +40,27 @@ public class Constants
     
     /** Código y mensaje cuando la huelga no existe */
     public static final Integer ERR_HUELGA_NO_EXISTE_CODE = 8 ;
-    public static final String ERR_HUELGA_NO_EXISTE_DESC = "La categoría no existe en el sistema." ;
+    public static final String ERR_HUELGA_NO_EXISTE_DESC = "La huelga no existe en el sistema." ;
+    
+    /** Código y mensaje cuando la huelga no existe */
+    public static final Integer ERR_HUELGA_FECHA_INICIO_NULA_CODE = 8 ;
+    public static final String ERR_HUELGA_FECHA_INICIO_NULA_DESC = "La fecha de inicio no puede ser nula o vacia." ;
 
+    /** Código y mensaje cuando el estado de la huelga no existe */
+    public static final Integer ERR_HUELGA_ESTADO_NO_EXISTE_CODE = 21 ;
+    public static final String ERR_HUELGA_ESTADO_NO_EXISTE_DESC = "El estado de la huelga no existe" ;
+    
+    /** Código y mensaje cuando el estado de la huelga es nulo */
+    public static final Integer ERR_HUELGA_ESTADO_NULO_CODE = 22 ;
+    public static final String ERR_HUELGA_ESTADO_NULO_DESC = "Estado nulo" ;
+    
+    /** Código y mensaje cuando la fecha de inicio de la huelga es inferior a la fecha fin */
+    public static final Integer ERR_HUELGA_FECHAS_INCOHERENTES_CODE = 23 ;
+    public static final String ERR_HUELGA_FECHAS_INCOHERENTES_DESC = "La fecha de fin no puede ser anterior a la fecha de inicio." ;
+    
+    /** Código y mensaje cuando la fecha límite de la huelga no se ha insertado */
+    public static final Integer ERR_HUELGA_FECHA_LIMITE_NO_EXISTE_CODE = 24 ;
+    public static final String ERR_HUELGA_FECHA_LIMITE_NO_EXISTE_DESC = "La fecha límite de inscripción debe ser insertada." ;
     // --- Errores de Alumno ---
     /** Código de error genérico para Alumno*/
     public static final Integer ERR_ALUMNO_CODE = 9 ;
@@ -80,9 +99,12 @@ public class Constants
     public static final Integer ERR_CURSOETAPAGRUPO_NO_EXISTE_CODE = 18 ;
     public static final String ERR_CURSOETAPAGRUPO_NO_EXISTE = "El CursoEtapaGrupono existe en el sistema." ;
     
+    
 
  	// --- Error de Servidor---
     /** Código y mensaje para errores generales del servidor */
     public static final Integer ERR_SERVIDOR_CODE = 20 ;
     public static final String ERR_SERVIDOR = "Error de servidor." ;
+
+	
 }

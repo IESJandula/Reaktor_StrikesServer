@@ -19,7 +19,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Embeddable
-public class ConvocaId implements Serializable 
+public class AlumnoHuelgaId implements Serializable 
 {
 
     /**
@@ -33,8 +33,8 @@ public class ConvocaId implements Serializable
      */
 	private String email ;
     /**
-     * Título del evento.
+     * Título de la huelga.
      * Forma parte de la clave primaria compuesta.
      */
-	private String titulo ;
+	private String nombre ;
 }

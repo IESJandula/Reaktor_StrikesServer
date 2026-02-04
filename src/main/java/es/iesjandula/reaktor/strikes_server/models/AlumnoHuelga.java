@@ -1,6 +1,6 @@
 package es.iesjandula.reaktor.strikes_server.models;
 
-import es.iesjandula.reaktor.strikes_server.models.ids.ConvocaId;
+import es.iesjandula.reaktor.strikes_server.models.ids.AlumnoHuelgaId;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "convoca")
+@Table(name = "alumno_huelga")
 
 /**
  * Entidad que representa la relación de convocatoria
@@ -31,14 +31,14 @@ import lombok.Setter;
  * La clave primaria está formada por el identificador del alumno
  * y el identificador de la huelga, definidos en ConvocaId.
  */
-public class Convoca 
+public class AlumnoHuelga
 {
 
     /**
      * Clave primaria compuesta de la entidad. Está formada por el email del alumno y el título de la huelga.
      */
     @EmbeddedId
-    private ConvocaId convocaId ;
+    private AlumnoHuelgaId alumnoHuelgaId ;
 
     /**
      * Alumno que convoca o participa en la huelga.
@@ -62,8 +62,8 @@ public class Convoca
      * </p>
      */
     @ManyToOne
-    @MapsId("titulo") // 
-    @JoinColumn(name = "titulo", nullable = false)
+    @MapsId("nombre") // 
+    @JoinColumn(name = "nombre", nullable = false)
     private Huelga huelga ;
 }
 

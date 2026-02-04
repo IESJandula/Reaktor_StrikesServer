@@ -6,9 +6,9 @@ import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -33,8 +33,9 @@ import lombok.Setter;
  * <p>
  * Mantiene relaciones:
  * <ul>
- *   <li>OneToMany con Convoca: lista de alumnos convocados.</li>
+ *   <li>OneToMany con AlumnoHuelga: lista de alumnos inscritos en la huelga.</li>
  *   <li>ManyToOne con Estado: estado actual de la huelga.</li>
+ *   <li>OneToMany con CursoEtapaGrupoHuelga: lista de cursos que se pueden inscribir en la huelga.</li>
  * </ul>
  * </p>
  */
@@ -48,7 +49,7 @@ public class Huelga
      */
 	@Id
 	@Column(length = 25)
-	private String titulo ; 
+	private String nombre ; 
 	
     /**
      * Fecha de inicio de la huelga.
@@ -61,32 +62,53 @@ public class Huelga
 	
     /**
      * Fecha de fin de la huelga.
+     */
+	@Column(nullable = false)
+	private Date fechaFin ;
+	
+	 /**
+     * Fecha de límite de inscripción a la huelga.
+     */
+	@Column(nullable = false)
+	private Date fechaLimite ;
+    /**
+     * Url por la cual tienen acceso a inscripción los alumnos a la huelga.
      * <p>
      * Este campo es opcional, puede ser nulo si la huelga aún está en curso.
      * </p>
      */
 	@Column
-	private Date fechaFin ;
+	private String urlGoogleScript ;
 	
 	/**
      * Lista de convocatorias de alumnos para esta huelga.
      * <p>
-     * Relación de tipo OneToMany con Convoca.
-     * El atributo mappedBy = "huelga" indica que la relación
-     * está mapeada desde la entidad Convoca.
+     * Relación de tipo OneToMany con AlumnoHuelga.
+     * El atributo mappedBy = "alumno_huelga" indica que la relación
+     * está mapeada desde la entidad AlumnoHuelga.
      * </p>
      */
 	@OneToMany(mappedBy = "huelga")
-	private List<Convoca> convocas ;
+	private List<AlumnoHuelga> alumnos ;
 	
     /**
-     * Estado actual de la huelga.
+     * Nombre del estado.
      * <p>
-     * Relación de tipo ManyToOne con Estado.
-     * Indica en qué estado se encuentra la huelga (por ejemplo, planificada, en curso, finalizada).
+     * Atributo que indica el estado en el que se encuentra la convocatoria de huelga.
      * </p>
      */
-	@ManyToOne
-	@JoinColumn(name = "estado")
-	private Estado estado ;
+	
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private EstadoHuelga estado;
+	/**
+     * Lista de convocatorias de alumnos para esta huelga.  
+     * <p>
+     * Relación de tipo OneToMany con CursoEtapaGrupoHuelga.
+     * El atributo mappedBy = "huelga" indica que la relación
+     * está mapeada desde la entidad CursoEtapaGrupoHuelga.
+     * </p>
+     */
+	@OneToMany(mappedBy = "huelga")
+	private List<CursoEtapaGrupoHuelga> cursos ;
 }

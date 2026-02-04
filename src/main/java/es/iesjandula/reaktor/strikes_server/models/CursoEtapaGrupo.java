@@ -41,7 +41,7 @@ public class CursoEtapaGrupo
      * </p>
      */
     @EmbeddedId
-    private CursoEtapaGrupoId cusroCursoEtapaGrupoId ;
+    private CursoEtapaGrupoId cursoEtapaGrupoId ;
     
     /**
      * Lista de alumnos que pertenecen a este curso, etapa y grupo.
@@ -53,4 +53,10 @@ public class CursoEtapaGrupo
      */
     @OneToMany(mappedBy = "cursoEtapaGrupo")
     private List<Alumno> alumnos ;
+    
+    /**
+     * Relación con huelgas a través de la entidad intermedia CursoEtapaGrupoHuelga.
+     */
+    @OneToMany(mappedBy = "cursoEtapaGrupo")
+    private List<CursoEtapaGrupoHuelga> cursoEtapaGrupoHuelgas;
 }
