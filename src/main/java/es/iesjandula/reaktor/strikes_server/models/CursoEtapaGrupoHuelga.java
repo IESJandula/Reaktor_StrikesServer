@@ -53,9 +53,14 @@ public class CursoEtapaGrupoHuelga
      * </p>
      */
     @ManyToOne
+<<<<<<< Updated upstream
     @MapsId("titulo") 
     @JoinColumn(name = "titulo", nullable = false)
     private Huelga huelga ;
+=======
+    @MapsId("titulo")
+    private Huelga huelga; 
+>>>>>>> Stashed changes
     
 	/**
 	 * Año escolar en el que se produce la huelga

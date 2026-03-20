@@ -57,7 +57,11 @@ public class HuelgaRestController
 
             Date fechaInicio = toDate(dto.getFechaInicio());
             Date fechaFin = dto.getFechaFin() != null ? toDate(dto.getFechaFin()) : null;
+<<<<<<< Updated upstream
 
+=======
+            
+>>>>>>> Stashed changes
             if (this.huelgaRepository.existsById(dto.getTitulo()))
             {
                 throw new StrikesServerException(Constants.ERR_HUELGA_EXISTE_CODE, Constants.ERR_HUELGA_EXISTE_DESC);
@@ -102,6 +106,10 @@ public class HuelgaRestController
             huelga.setFechaInicio(fechaInicio);
             huelga.setFechaFin(fechaFin);
             huelga.setEstado(EstadoHuelga.CONVOCADA);
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
             huelga.setUrlEncuestado(formUrl);
             huelga.setGoogleFormId(formId);
             huelga.setGoogleSpreadsheetId(spreadsheetId);
@@ -122,12 +130,18 @@ public class HuelgaRestController
         }
         catch (StrikesServerException excepcion)
         {
-            return ResponseEntity.badRequest().body(excepcion.getBodyExceptionMessage());
+            return ResponseEntity.badRequest()
+                    .body(excepcion.getBodyExceptionMessage());
         }
         catch (Exception excepcion)
         {
             log.error("Error creando huelga", excepcion);
+<<<<<<< Updated upstream
             return ResponseEntity.status(500).body("Error interno al crear huelga");
+=======
+            return ResponseEntity.status(500)
+                    .body("Error interno al crear huelga");
+>>>>>>> Stashed changes
         }
     }
 
@@ -142,7 +156,12 @@ public class HuelgaRestController
                 throw new StrikesServerException(Constants.ERR_HUELGA_TITULO_NULO_VACIO_CODE, Constants.ERR_HUELGA_TITULO_NULO_VACIO_DESC) ;
             }
 
+<<<<<<< Updated upstream
             Huelga huelga = this.huelgaRepository.findById(titulo).orElseThrow(() ->
+=======
+            Huelga huelga = this.huelgaRepository.findById(titulo)
+                .orElseThrow(() ->
+>>>>>>> Stashed changes
                     new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE,Constants.ERR_HUELGA_NO_EXISTE_DESC));
 
             // 🔹 Llamar a Apps Script para borrar Form y Sheet
@@ -170,21 +189,49 @@ public class HuelgaRestController
     }
 
     @GetMapping("/")
+<<<<<<< Updated upstream
     public ResponseEntity<?> obtenerHuelgas(@PageableDefault(size = 5, sort = "titulo") Pageable pageable)
     {
         try
         {
             Page<HuelgaResponseDto> dtoPage = this.huelgaRepository.findHuelgasResponseDto(pageable);
+=======
+    public ResponseEntity<?> obtenerHuelgas(
+            @PageableDefault(size = 5, sort = "titulo") Pageable pageable)
+    {
+        try
+        {
+            Page<Huelga> page = this.huelgaRepository.findAll(pageable);
+
+            Page<HuelgaResponseDto> dtoPage = page.map(huelga ->
+            new HuelgaResponseDto(
+                    huelga.getTitulo(),
+                    huelga.getFechaInicio() != null ? huelga.getFechaInicio().getTime() : null,
+                    huelga.getFechaFin() != null ? huelga.getFechaFin().getTime() : null,
+                    huelga.getEstado() != null ? huelga.getEstado().name() : null,
+                    huelga.getUrlEncuestado(),
+                    huelga.getAlumnos() != null ? (long) huelga.getAlumnos().size() : 0L
+            )
+    );
+>>>>>>> Stashed changes
 
             return ResponseEntity.ok(dtoPage);
         }
         catch (Exception excepcion)
         {
+<<<<<<< Updated upstream
             log.error("Error obteniendo huelgas", excepcion);
 
             StrikesServerException ex = new StrikesServerException( Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, excepcion);
 
             return ResponseEntity.status(500).body(ex.getBodyExceptionMessage());
+=======
+            log.error("Error genérico obtener el/las huelga/s", excepcion);
+            StrikesServerException huelgaExcepcion =
+                    new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR,excepcion);
+
+            return ResponseEntity.status(500).body(huelgaExcepcion.getBodyExceptionMessage());
+>>>>>>> Stashed changes
         }
     }
     

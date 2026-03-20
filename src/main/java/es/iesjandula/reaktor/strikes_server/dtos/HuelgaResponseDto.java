@@ -1,6 +1,9 @@
 package es.iesjandula.reaktor.strikes_server.dtos;
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,9 +22,13 @@ public class HuelgaResponseDto
 {
     /**
      * Título de la huelga.
+<<<<<<< Updated upstream
      * Identifica de forma única la huelga enviada en la respuesta.
      */
 
+=======
+     */
+>>>>>>> Stashed changes
     private String titulo;
 
     /**
@@ -48,10 +55,16 @@ public class HuelgaResponseDto
      * Número total de alumnos inscritos.
      */
     private Long numeroParticipantes;
+<<<<<<< Updated upstream
 
 
     /**
      * Constructor utilizado desde el controlador.
+=======
+
+    /**
+     * Constructor utilizado desde el controlador REST.
+>>>>>>> Stashed changes
      */
     public HuelgaResponseDto(
             String titulo,

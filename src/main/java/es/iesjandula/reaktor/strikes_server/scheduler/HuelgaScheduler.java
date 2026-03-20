@@ -46,11 +46,17 @@ public class HuelgaScheduler
                     procesarRespuestas(huelga);
                 }
             }
+<<<<<<< Updated upstream
             catch (Exception e)
             {
                 log.error("Error procesando huelga ID {}: {}",
                           huelga.getTitulo(),
                           e.getMessage());
+=======
+            catch (Exception exception)
+            {
+                log.error("Error procesando huelga ID " + huelga.getTitulo()+ " : " + exception.getMessage());
+>>>>>>> Stashed changes
             }
         }
 
@@ -76,6 +82,7 @@ public class HuelgaScheduler
     // ==========================================
     private void procesarRespuestas(Huelga huelga)
     {
+<<<<<<< Updated upstream
         if (huelga.getGoogleSpreadsheetId() == null ||
             huelga.getGoogleSheetName() == null)
         {
@@ -87,10 +94,14 @@ public class HuelgaScheduler
             googleScriptService.obtenerRespuestas(
                 huelga.getGoogleSpreadsheetId(),
                 huelga.getGoogleSheetName());
+=======
+        List<Map<String, Object>> respuestas = googleScriptService.obtenerRespuestas(huelga.getGoogleSpreadsheetId(),huelga.getGoogleSheetName());
+>>>>>>> Stashed changes
 
         if (respuestas.isEmpty())
             return;
 
+<<<<<<< Updated upstream
         int ultimaFilaProcesada =
             huelga.getUltimaFilaProcesada() != null
                 ? huelga.getUltimaFilaProcesada()
@@ -107,6 +118,17 @@ public class HuelgaScheduler
 
             String decision =
                 (String) respuesta.get("¿Te inscribes en la huelga?");
+=======
+        int ultimaFilaProcesada = huelga.getUltimaFilaProcesada();
+
+        for (int i = ultimaFilaProcesada; i < respuestas.size(); i++)
+        {
+            Map<String, Object> r = respuestas.get(i);
+
+            String email = ((String) r.get("Correo electrónico")).toLowerCase().trim();
+
+            String decision =(String) r.get("¿Te inscribes en la huelga?");
+>>>>>>> Stashed changes
 
             if (correoYaRegistrado(huelga, email))
                 continue;
@@ -128,10 +150,16 @@ public class HuelgaScheduler
 
     private void procesarInscripcion(Huelga huelga, String email, String decision)
     {
+<<<<<<< Updated upstream
     	log.info("Nueva respuesta recibida en huelga {} : {} {}", 
                 huelga.getTitulo(), 
                 email, 
                 decision) ;
 
+=======
+        log.info("Nueva inscripción en huelga " + huelga.getTitulo()+" : " + email +" ", decision);
+
+        // TODO: Guardar en BD
+>>>>>>> Stashed changes
     }
 }
