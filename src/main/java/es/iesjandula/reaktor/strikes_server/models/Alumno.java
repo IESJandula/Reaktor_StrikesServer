@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import jakarta.persistence.JoinColumns;
 
 /**
  * Clase que representa a un alumno en la base de datos.
@@ -56,9 +57,11 @@ public class Alumno
      * pueden pertenecer al mismo curso, etapa y grupo.
      */
     @ManyToOne
-    @JoinColumn(name = "curso", referencedColumnName = "curso")
-    @JoinColumn(name = "etapa", referencedColumnName = "etapa")
-    @JoinColumn(name = "grupo", referencedColumnName = "grupo")
-    private CursoEtapaGrupo cursoEtapaGrupo ;
+    @JoinColumns({
+        @JoinColumn(name = "curso", referencedColumnName = "curso"),
+        @JoinColumn(name = "etapa", referencedColumnName = "etapa"),
+        @JoinColumn(name = "grupo", referencedColumnName = "grupo")
+    })
+    private CursoEtapaGrupo cursoEtapaGrupo;
 }
 

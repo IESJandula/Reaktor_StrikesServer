@@ -1,5 +1,7 @@
 package es.iesjandula.reaktor.strikes_server.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import es.iesjandula.reaktor.strikes_server.models.Alumno;
@@ -12,5 +14,9 @@ import es.iesjandula.reaktor.strikes_server.models.Alumno;
  */
 public interface IAlumnoRepository extends JpaRepository<Alumno, String>
 {
+
+	List<Alumno> findByNombreIgnoreCaseAndApellidosIgnoreCase(String nombre, String apellidos);
+	
+	List<Alumno> findByApellidosIgnoreCaseAndNombreIgnoreCase(String apellidos, String nombre);
 
 }

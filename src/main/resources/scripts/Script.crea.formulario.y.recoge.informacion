@@ -1,0 +1,166 @@
+/**
+ * Genera un formulario de huelga a partir de la plantilla
+ * Se ejecuta cuando el backend crea una huelga
+ */
+function doPost(e) {
+
+  if (!e || !e.postData || !e.postData.contents) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: "Petición inválida" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  //const data = JSON.parse('{ "titulo" : "prueba"}');
+  const data = JSON.parse(e.postData.contents);
+  const titulo = data.titulo;
+
+  if (!titulo) {
+    return ContentService.createTextOutput(
+      JSON.stringify({ error: "Falta el titulo de la huelga" })
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ID de la plantilla 
+  const TEMPLATE_FORM_ID =
+    "1i3IkmsMzN9QBOTsn7SnbIi7U-pYth4rXd-jFrEOASEc";
+
+  //autorizar();
+
+  // 1. Copiar la plantilla
+  const copiedFile = DriveApp
+    .getFileById(TEMPLATE_FORM_ID)
+    .makeCopy("Inscripción Huelga " + titulo);
+
+  // 2. Abrir el nuevo formulario
+  const form = FormApp.openById(copiedFile.getId());
+
+  // Esperar a que Google lo inicialice
+  Utilities.sleep(2000);
+
+  // 3. Personalizar título y descripción
+  form.setTitle("Inscripción para la huelga " + titulo);
+  form.setDescription(
+    "Formulario de inscripción para la huelga " + titulo
+  );
+
+
+  // 4. Crear Google Sheet de respuestas
+  const spreadsheet = SpreadsheetApp.create(
+    "Inscripción Huelga "+ titulo +" (respuestas)"
+  );
+
+  // 5. Renombrar la hoja de respuestas
+  spreadsheet.getSheets()[0].setName("Inscripción Huelga "+titulo);
+
+  // 6. Conectar Form → Sheet
+  form.setDestination(
+    FormApp.DestinationType.SPREADSHEET,
+    spreadsheet.getId()
+  );
+
+  // 7. Guardar datos para el scheduler
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("SPREADSHEET_ID", spreadsheet.getId());
+  props.setProperty("SHEET_NAME", "Inscripción Huelga");
+
+  // 8. Respuesta al backend
+  return ContentService.createTextOutput(
+    JSON.stringify({
+      formId: form.getId(),
+      formUrl: form.getPublishedUrl(),
+      spreadsheetId: spreadsheet.getId(),
+      sheetName: "Inscripción Huelga"
+    })
+  ).setMimeType(ContentService.MimeType.JSON);
+
+  //function autorizar() {
+  //DriveApp.getFiles();
+  //FormApp.openById("1i3IkmsMzN9QBOTsn7SnbIi7U-pYth4rXd-jFrEOASEc");
+  //SpreadsheetApp.create("test permisos");
+  //}
+}
+
+/**
+ * Endpoint HTTP GET
+ * Este método se ejecuta cuando el backend (Spring Scheduler)
+ * llama a la URL del Web App de Apps Script.
+ *
+ * Espera recibir por parámetros:
+ *  - spreadsheetId → ID del Google Sheet de respuestas
+ *  - sheet         → titulo de la hoja (pestaña) dentro del Sheet
+ */
+function doGet(request) {
+
+  // ==============================
+  // Validación de parámetros obligatorios
+  // ==============================
+  if (!request.parameter.spreadsheetId || !request.parameter.sheet) {
+    return jsonResponse({
+      error: "Faltan parámetros spreadsheetId o sheet"
+    });
+  }
+  try {
+    // ==============================
+    // Intentar abrir el Spreadsheet
+    // Puede lanzar excepción si:
+    // - No existe
+    // - Está en papelera
+    // - Sin permisos
+    // ==============================
+    const spreadsheet = SpreadsheetApp.openById(
+      request.parameter.spreadsheetId
+    );
+
+    const sheet = spreadsheet.getSheetByName(
+      request.parameter.sheet
+    );
+
+    // ==============================
+    // Validar que la hoja exista
+    // ==============================
+    if (!sheet) {
+      return jsonResponse({
+        error: "Hoja no encontrada"
+      });
+    }
+
+    const values = sheet.getDataRange().getValues();
+
+    // ==============================
+    // Si solo hay cabeceras → no hay respuestas
+    // ==============================
+    if (values.length < 2) {
+      return jsonResponse([]);
+    }
+
+    const headers = values[0];
+    const responses = [];
+
+    // ===============
+    // Construir JSON 
+    // ===============
+    for (let i = 1; i < values.length; i++) {
+
+      const row = values[i];
+      const item = {};
+
+      headers.forEach((h, idx) => {
+        item[h] = row[idx] || "";
+      });
+
+      responses.push(item);
+    }
+
+    return jsonResponse(responses);
+
+  } catch (error) {
+
+    // ==============================
+    // Captura cualquier error real
+    // ==============================
+    return jsonResponse({
+      error: "No se pudo acceder al spreadsheet",
+      details: error.toString()
+    });
+  }
+}

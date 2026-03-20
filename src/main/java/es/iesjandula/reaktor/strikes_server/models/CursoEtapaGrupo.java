@@ -41,7 +41,7 @@ public class CursoEtapaGrupo
      * </p>
      */
     @EmbeddedId
-    private CursoEtapaGrupoId cusroCursoEtapaGrupoId ;
+    private CursoEtapaGrupoId cursoEtapaGrupoId ;
     
     /**
      * Lista de alumnos que pertenecen a este curso, etapa y grupo.

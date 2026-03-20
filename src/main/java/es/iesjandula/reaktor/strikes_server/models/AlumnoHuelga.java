@@ -1,6 +1,7 @@
 package es.iesjandula.reaktor.strikes_server.models;
 
-import es.iesjandula.reaktor.strikes_server.models.ids.ConvocaId;
+import es.iesjandula.reaktor.strikes_server.models.ids.AlumnoHuelgaId;
+import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
@@ -17,7 +18,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "convoca")
+@Table(name = "alumno_huelga")
 
 /**
  * Entidad que representa la relación de convocatoria
@@ -31,17 +32,17 @@ import lombok.Setter;
  * La clave primaria está formada por el identificador del alumno
  * y el identificador de la huelga, definidos en ConvocaId.
  */
-public class Convoca 
+public class AlumnoHuelga
 {
 
     /**
      * Clave primaria compuesta de la entidad. Está formada por el email del alumno y el título de la huelga.
      */
     @EmbeddedId
-    private ConvocaId convocaId ;
+    private AlumnoHuelgaId alumnoHuelgaId ;
 
     /**
-     * Alumno que convoca o participa en la huelga.
+     * Alumno que  participa en la huelga.
      * <p>
      * Relación de tipo ManyToOne con Alumno.
      * El atributo MapsId("email") indica que este campo
@@ -65,5 +66,22 @@ public class Convoca
     @MapsId("titulo") // 
     @JoinColumn(name = "titulo", nullable = false)
     private Huelga huelga ;
+    
+    /**
+     * Indica si el alumno participa en la huelga.
+     * <p>
+     * Este atributo almacena la decisión del alumno obtenida
+     * a partir del formulario de Google Forms.
+     * </p>
+     * <p>
+     * Si el valor es:
+     * <ul>
+     *   <li>true → el alumno ha decidido secundar la huelga.</li>
+     *   <li>false → el alumno ha decidido no secundar la huelga.</li>
+     * </ul>
+     * </p>
+     */
+    @Column(nullable = false)
+    private Boolean participa;
 }
 

@@ -1,5 +1,7 @@
 package es.iesjandula.reaktor.strikes_server.models.ids;
+
 import java.io.Serializable;
+
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,10 +9,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Representa la clave primaria compuesta de la entidad Convoca.
+ * Representa la clave primaria compuesta de la entidad Pertenece.
  * 
- * <p>Esta clase se utiliza para identificar de manera única una huelga mediante
- * el email del alumno y el título de la huelga.</p>
+ * <p>Esta clase se utiliza para identificar el año escolar en el que se produjo la huelga.</p>
  * 
  * <p>Al implementar Serializable, puede ser utilizada como clave embebida en JPA.</p>
  */
@@ -19,7 +20,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Embeddable
-public class ConvocaId implements Serializable 
+public class CursoEtapaGrupoHuelgaId implements Serializable 
 {
 
     /**
@@ -28,13 +29,24 @@ public class ConvocaId implements Serializable
 	private static final long serialVersionUID = 7375364774028493903L ;
 	
     /**
-     * Email del alumno que se inscribe.
-     * Forma parte de la clave primaria compuesta.
+     * Curso
      */
-	private String email ;
+    private Integer cursoEtapaGrupoCurso;
+
     /**
-     * Título del evento.
+     * Etapa educativa
+     */
+    private String cursoEtapaGrupoEtapa;
+
+    /**
+     * Grupo
+     */
+    private String cursoEtapaGrupoGrupo;
+	
+    /**
+     * Título de la huelga.
      * Forma parte de la clave primaria compuesta.
      */
 	private String titulo ;
+	
 }
