@@ -1,5 +1,7 @@
 package es.iesjandula.reaktor.strikes_server.rest;
 
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -7,19 +9,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import es.iesjandula.reaktor.strikes_server.dtos.AlumnoHuelgaRequestDto;
 import es.iesjandula.reaktor.strikes_server.models.Alumno;
 import es.iesjandula.reaktor.strikes_server.models.AlumnoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
 import es.iesjandula.reaktor.strikes_server.models.ids.AlumnoHuelgaId;
-import es.iesjandula.reaktor.strikes_server.repository.IAlumnoRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IAlumnoHuelgaRepository;
+import es.iesjandula.reaktor.strikes_server.repository.IAlumnoRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.utils.Constants;
 import es.iesjandula.reaktor.strikes_server.utils.StrikesServerException;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.Map;
 
 /**
  * Controlador REST para operaciones relacionadas con los alumnos
@@ -30,7 +31,6 @@ import java.util.Map;
 @Slf4j
 public class AlumnoHuelgaRestController
 {
-
     @Autowired
     private IAlumnoRepository alumnoRepository;
 
@@ -51,76 +51,106 @@ public class AlumnoHuelgaRestController
      *  - decision → SI / NO (si secunda la huelga)
      */
     @PostMapping("/inscripcion")
-    public ResponseEntity<?> registrarInscripcion(@RequestBody Map<String,String> body)
+    public ResponseEntity<?> registrarInscripcion(@RequestBody AlumnoHuelgaRequestDto alumnoHuelgaRequestDto)
     {
         try
         {
-            String titulo = body.get("titulo");
-            String email = body.get("email").toLowerCase().trim();
-            String decision = body.get("decision");
+            log.info("Procesando inscripción en huelga {} para alumno {} participa {}",
+                    alumnoHuelgaRequestDto.getTitulo(), alumnoHuelgaRequestDto.getEmail(), alumnoHuelgaRequestDto.getParticipa());
 
-            log.info("Procesando inscripción en huelga {} para alumno {} decisión {}",
-                    titulo, email, decision);
+            // Validamos el título y el email
+            this.validarDatos(alumnoHuelgaRequestDto) ;
 
-            validarDatos(titulo, email);
+            // Validamos si existe la huelga y se encuentra convocada
+            Huelga huelga = this.validarHuelgaExiste(alumnoHuelgaRequestDto) ;
+            
+            // Validamos si existe el alumno
+            Alumno alumno = this.validarAlumnoExiste(alumnoHuelgaRequestDto) ;             
 
-            Huelga huelga = huelgaRepository.findById(titulo).orElseThrow(() ->
-                            new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE, Constants.ERR_HUELGA_NO_EXISTE_DESC));
-            if (huelga.getEstado() != EstadoHuelga.CONVOCADA)
-            {
-                throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC);
-            }
-
-            Alumno alumno = alumnoRepository.findById(email).orElseThrow(() ->
-                            new StrikesServerException(Constants.ERR_ALUMNO_NO_EXISTE_CODE, Constants.ERR_ALUMNO_NO_EXISTE_DESC));
-
-            // comprobar duplicado
-            AlumnoHuelgaId id = new AlumnoHuelgaId(email, titulo);
-
-            if (alumnoHuelgaRepository.existsById(id))
-            {
-                log.info("El alumno {} ya estaba registrado en la huelga {}", email, titulo);
-                return ResponseEntity.ok("El alumno ya estaba registrado en la huelga");
-            }
+            // Creamos la clave primaria
+            AlumnoHuelgaId alumnoHuelgaId = new AlumnoHuelgaId(alumnoHuelgaRequestDto.getEmail(), alumnoHuelgaRequestDto.getTitulo());
 
             // crear relación alumno-huelga
             AlumnoHuelga alumnoHuelga = new AlumnoHuelga();
-            alumnoHuelga.setAlumnoHuelgaId(id);
+            alumnoHuelga.setAlumnoHuelgaId(alumnoHuelgaId);
             alumnoHuelga.setAlumno(alumno);
             alumnoHuelga.setHuelga(huelga);
 
-            alumnoHuelgaRepository.save(alumnoHuelga);
+            this.alumnoHuelgaRepository.saveAndFlush(alumnoHuelga);
 
             log.info("Inscripción guardada correctamente");
 
-            return ResponseEntity.ok("Inscripción registrada correctamente");
+            return ResponseEntity.ok().build();
         }
         catch (StrikesServerException exception)
         {
-            return ResponseEntity.badRequest()
-                    .body(exception.getBodyExceptionMessage());
+            return ResponseEntity.badRequest().body(exception.getBodyExceptionMessage());
         }
         catch (Exception exception)
         {
-            log.error("Error registrando inscripción", exception);
-
-            return ResponseEntity.status(500).body("Error interno registrando inscripción");
+        	// Logueamos
+            log.error(Constants.ERR_SERVIDOR, exception);
+            
+            // Creamos excepción con la traza del error
+            StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception);
+            
+            // Devolvemos el mapa con el código, mensaje y traza de excepción
+            return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
         }
     }
 
     /**
      * Validación básica de datos recibidos.
      */
-    private void validarDatos(String titulo, String email) throws StrikesServerException
+    private void validarDatos(AlumnoHuelgaRequestDto alumnoHuelgaRequestDto) throws StrikesServerException
     {
-        if (titulo == null || titulo.isEmpty())
+        if (alumnoHuelgaRequestDto.getTitulo() == null || alumnoHuelgaRequestDto.getTitulo().isEmpty())
         {
+        	log.error(Constants.ERR_HUELGA_TITULO_NULO_VACIO_DESC);
             throw new StrikesServerException(Constants.ERR_HUELGA_TITULO_NULO_VACIO_CODE, Constants.ERR_HUELGA_TITULO_NULO_VACIO_DESC);
         }
 
-        if (email == null || email.isEmpty())
+        if (alumnoHuelgaRequestDto.getEmail() == null || alumnoHuelgaRequestDto.getEmail().isEmpty())
         {
+        	log.error(Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_DESC);
             throw new StrikesServerException(Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_CODE, Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_DESC);
         }
     }
+    private Huelga validarHuelgaExiste(AlumnoHuelgaRequestDto alumnoHuelgaRequestDto) throws StrikesServerException
+    {
+    	// Validamos si la huelga existe
+        Optional<Huelga> optionalHuelga = huelgaRepository.findById(alumnoHuelgaRequestDto.getTitulo()) ;
+        
+        if (optionalHuelga.isEmpty())
+        {
+        	log.error(Constants.ERR_HUELGA_NO_EXISTE_DESC) ;
+        	throw new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE, Constants.ERR_HUELGA_NO_EXISTE_DESC) ;
+        }
+        
+        // Si llegamos a este punto es porque existe la huelga
+        Huelga huelga = optionalHuelga.get() ;
+        
+        
+        if (huelga.getEstado() != EstadoHuelga.CONVOCADA)
+        {
+        	log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC);
+            throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC);
+        }
+        return huelga ;
+    }
+    
+    private Alumno validarAlumnoExiste(AlumnoHuelgaRequestDto alumnoHuelgaRequestDto) throws StrikesServerException
+    {
+    	//Validamos si el alumno existe
+        Optional<Alumno> optionalAlumno = alumnoRepository.findById(alumnoHuelgaRequestDto.getEmail()) ;
+        
+        if (optionalAlumno.isEmpty())
+        {
+        	log.error(Constants.ERR_ALUMNO_NO_EXISTE_DESC) ;
+        	throw new StrikesServerException(Constants.ERR_ALUMNO_NO_EXISTE_CODE, Constants.ERR_ALUMNO_NO_EXISTE_DESC) ;
+        }
+        return optionalAlumno.get() ;
+    }
+    
+    
 }

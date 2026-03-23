@@ -34,5 +34,6 @@ reaktor:
   clientId: strikes
   http_connection_timeout: 30000
   reiniciarParametros: true
+  plantillaFormulario: https://script.google.com/macros/s/AKfycbxBZMx9zV8tmk15DDtmf5bXA9xOzGSaZCtk65E6TorKkUoTfezQJd3PwgkaWNrsLGq05A/exec
 
 

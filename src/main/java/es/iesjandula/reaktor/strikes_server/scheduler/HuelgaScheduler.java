@@ -46,17 +46,11 @@ public class HuelgaScheduler
                     procesarRespuestas(huelga);
                 }
             }
-<<<<<<< Updated upstream
-            catch (Exception e)
-            {
-                log.error("Error procesando huelga ID {}: {}",
-                          huelga.getTitulo(),
-                          e.getMessage());
-=======
+
             catch (Exception exception)
             {
                 log.error("Error procesando huelga ID " + huelga.getTitulo()+ " : " + exception.getMessage());
->>>>>>> Stashed changes
+
             }
         }
 
@@ -82,61 +76,52 @@ public class HuelgaScheduler
     // ==========================================
     private void procesarRespuestas(Huelga huelga)
     {
-<<<<<<< Updated upstream
-        if (huelga.getGoogleSpreadsheetId() == null ||
-            huelga.getGoogleSheetName() == null)
+        if (huelga.getGoogleSpreadsheetId() == null || huelga.getGoogleSheetName() == null)
         {
             log.warn("Huelga {} sin recursos Google configurados", huelga.getTitulo());
             return;
         }
 
-        List<Map<String, Object>> respuestas =
-            googleScriptService.obtenerRespuestas(
-                huelga.getGoogleSpreadsheetId(),
-                huelga.getGoogleSheetName());
-=======
-        List<Map<String, Object>> respuestas = googleScriptService.obtenerRespuestas(huelga.getGoogleSpreadsheetId(),huelga.getGoogleSheetName());
->>>>>>> Stashed changes
+        List<Map<String, Object>> respuestas = googleScriptService.obtenerRespuestas( huelga.getGoogleSpreadsheetId(), huelga.getGoogleSheetName());
 
         if (respuestas.isEmpty())
+        {
+            log.info("No hay respuestas nuevas para la huelga {}", huelga.getTitulo());
             return;
+        }
 
-<<<<<<< Updated upstream
-        int ultimaFilaProcesada =
-            huelga.getUltimaFilaProcesada() != null
-                ? huelga.getUltimaFilaProcesada()
-                : 0;
+        int ultimaFilaProcesada = huelga.getUltimaFilaProcesada() != null ? huelga.getUltimaFilaProcesada() : 0;
+
+        log.info("Procesando respuestas desde fila {} hasta {} para huelga {}", ultimaFilaProcesada, respuestas.size(), huelga.getTitulo());
 
         for (int i = ultimaFilaProcesada; i < respuestas.size(); i++)
         {
             Map<String, Object> respuesta = respuestas.get(i);
 
-            String email =
-                ((String) respuesta.get("Correo electrónico"))
-                .toLowerCase()
-                .trim();
+            if (respuesta.get("Correo electrónico") == null)
+            {
+                log.warn("Fila {} sin email, se ignora", i);
+                continue;
+            }
 
-            String decision =
-                (String) respuesta.get("¿Te inscribes en la huelga?");
-=======
-        int ultimaFilaProcesada = huelga.getUltimaFilaProcesada();
+            String email = ((String) respuesta.get("Correo electrónico")).toLowerCase().trim();
 
-        for (int i = ultimaFilaProcesada; i < respuestas.size(); i++)
-        {
-            Map<String, Object> r = respuestas.get(i);
-
-            String email = ((String) r.get("Correo electrónico")).toLowerCase().trim();
-
-            String decision =(String) r.get("¿Te inscribes en la huelga?");
->>>>>>> Stashed changes
+            String decision = (String) respuesta.get("¿Te inscribes en la huelga?");
 
             if (correoYaRegistrado(huelga, email))
+            {
+                log.info("Alumno {} ya registrado en huelga {}", email, huelga.getTitulo());
                 continue;
+            }
+
+            log.info("Nueva inscripción detectada → {} ({})", email, decision);
 
             procesarInscripcion(huelga, email, decision);
         }
 
         huelga.setUltimaFilaProcesada(respuestas.size());
+
+        log.info("Actualizada última fila procesada a {} para huelga {}", respuestas.size(), huelga.getTitulo());
     }
 
     // ==========================================
@@ -150,16 +135,10 @@ public class HuelgaScheduler
 
     private void procesarInscripcion(Huelga huelga, String email, String decision)
     {
-<<<<<<< Updated upstream
-    	log.info("Nueva respuesta recibida en huelga {} : {} {}", 
-                huelga.getTitulo(), 
-                email, 
-                decision) ;
 
-=======
         log.info("Nueva inscripción en huelga " + huelga.getTitulo()+" : " + email +" ", decision);
 
         // TODO: Guardar en BD
->>>>>>> Stashed changes
+
     }
 }

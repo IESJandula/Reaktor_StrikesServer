@@ -55,6 +55,10 @@ public class Constants
     /** Código cuando la fecha de inicio es nula o inválida */
     public static final Integer ERR_HUELGA_FECHA_INICIO_NULA_CODE = 5;
     public static final String ERR_HUELGA_FECHA_INICIO_NULA_DESC = "La fecha de inicio de la huelga no puede ser nula o inválida.";
+    
+    /** Código cuando la fecha de fin es nula o inválida */
+    public static final Integer ERR_HUELGA_FECHA_FIN_NULA_CODE = 17;
+    public static final String ERR_HUELGA_FECHA_FIN_NULA_DESC = "La fecha de fin de la huelga no puede ser nula o inválida.";
 
     /** Código cuando las fechas de la huelga son incoherentes */
     public static final Integer ERR_HUELGA_FECHAS_INCOHERENTES_CODE = 6;
@@ -112,6 +116,7 @@ public class Constants
     /** Código para errores generales del servidor */
     public static final Integer ERR_SERVIDOR_CODE = 15;
     public static final String ERR_SERVIDOR = "Se ha producido un error interno en el servidor.";
+
 
 
 }

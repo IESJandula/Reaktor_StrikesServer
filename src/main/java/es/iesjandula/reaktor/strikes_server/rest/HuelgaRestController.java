@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -45,33 +46,21 @@ public class HuelgaRestController
     @Autowired
     private IHuelgaRepository huelgaRepository;
     
-    
+	/** URL permitida de CORS */
+	@Value("${reaktor.plantillaFormulario}")
+	private String plantillaFormulario ;
 
     @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @PostMapping(value = "/", consumes = "application/json")
-    public ResponseEntity<?> crearHuelga(@RequestBody HuelgaRequestDto dto)
+    public ResponseEntity<?> crearHuelga(@RequestBody HuelgaRequestDto huelgaRequestDto)
     {
         try
         {
-            validarCrearHuelga(dto.getTitulo(),dto.getFechaInicio(),dto.getFechaFin());
-
-            Date fechaInicio = toDate(dto.getFechaInicio());
-            Date fechaFin = dto.getFechaFin() != null ? toDate(dto.getFechaFin()) : null;
-<<<<<<< Updated upstream
-
-=======
-            
->>>>>>> Stashed changes
-            if (this.huelgaRepository.existsById(dto.getTitulo()))
-            {
-                throw new StrikesServerException(Constants.ERR_HUELGA_EXISTE_CODE, Constants.ERR_HUELGA_EXISTE_DESC);
-            }
+            this.validarCreacionHuelga(huelgaRequestDto);
 
             // ==============================
             // LLAMAR A GOOGLE APPS SCRIPT
             // ==============================
-
-            String webAppCreateUrl = "https://script.google.com/macros/s/AKfycbxBZMx9zV8tmk15DDtmf5bXA9xOzGSaZCtk65E6TorKkUoTfezQJd3PwgkaWNrsLGq05A/exec"; 
 
             RestTemplate restTemplate = new RestTemplate();
 
@@ -79,11 +68,11 @@ public class HuelgaRestController
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             Map<String, Object> body = new HashMap<>();
-            body.put("titulo", dto.getTitulo());
+            body.put("titulo", huelgaRequestDto.getTitulo());
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(webAppCreateUrl, request, Map.class);
+            ResponseEntity<Map> response = restTemplate.postForEntity(this.plantillaFormulario, request, Map.class);
 
             Map responseBody = response.getBody();
 
@@ -100,16 +89,14 @@ public class HuelgaRestController
             // ==============================
             // CREAR ENTIDAD
             // ==============================
+            Date fechaInicio = this.date(huelgaRequestDto.getFechaInicio());
+            Date fechaFin = this.date(huelgaRequestDto.getFechaFin());
 
             Huelga huelga = new Huelga();
-            huelga.setTitulo(dto.getTitulo());
+            huelga.setTitulo(huelgaRequestDto.getTitulo());
             huelga.setFechaInicio(fechaInicio);
             huelga.setFechaFin(fechaFin);
             huelga.setEstado(EstadoHuelga.CONVOCADA);
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
             huelga.setUrlEncuestado(formUrl);
             huelga.setGoogleFormId(formId);
             huelga.setGoogleSpreadsheetId(spreadsheetId);
@@ -117,7 +104,7 @@ public class HuelgaRestController
 
             this.huelgaRepository.saveAndFlush(huelga);
 
-            HuelgaResponseDto responseDto = new HuelgaResponseDto(
+            HuelgaResponseDto huelgaResponseDto = new HuelgaResponseDto(
                     huelga.getTitulo(),
                     huelga.getFechaInicio() != null ? huelga.getFechaInicio().getTime() : null,
                     huelga.getFechaFin() != null ? huelga.getFechaFin().getTime() : null,
@@ -126,22 +113,23 @@ public class HuelgaRestController
                     0L
             );
 
-            return ResponseEntity.ok(responseDto);
+            return ResponseEntity.ok(huelgaResponseDto);
         }
         catch (StrikesServerException excepcion)
         {
-            return ResponseEntity.badRequest()
-                    .body(excepcion.getBodyExceptionMessage());
+            return ResponseEntity.badRequest().body(excepcion.getBodyExceptionMessage());
         }
         catch (Exception excepcion)
         {
-            log.error("Error creando huelga", excepcion);
-<<<<<<< Updated upstream
-            return ResponseEntity.status(500).body("Error interno al crear huelga");
-=======
-            return ResponseEntity.status(500)
-                    .body("Error interno al crear huelga");
->>>>>>> Stashed changes
+        	// Logueamos
+            log.error(Constants.ERR_SERVIDOR, excepcion);
+            
+            // Creamos excepción con la traza del error
+            StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, excepcion);
+            
+            // Devolvemos el mapa con el código, mensaje y traza de excepción
+            return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
+
         }
     }
 
@@ -156,12 +144,8 @@ public class HuelgaRestController
                 throw new StrikesServerException(Constants.ERR_HUELGA_TITULO_NULO_VACIO_CODE, Constants.ERR_HUELGA_TITULO_NULO_VACIO_DESC) ;
             }
 
-<<<<<<< Updated upstream
+
             Huelga huelga = this.huelgaRepository.findById(titulo).orElseThrow(() ->
-=======
-            Huelga huelga = this.huelgaRepository.findById(titulo)
-                .orElseThrow(() ->
->>>>>>> Stashed changes
                     new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE,Constants.ERR_HUELGA_NO_EXISTE_DESC));
 
             // 🔹 Llamar a Apps Script para borrar Form y Sheet
@@ -183,22 +167,22 @@ public class HuelgaRestController
         }
         catch (Exception excepcion)
         {
-            log.error("Error al eliminar recursos Google", excepcion);
-            return ResponseEntity.status(500).body("Error interno al eliminar recursos Google");
+        	// Logueamos
+            log.error(Constants.ERR_SERVIDOR, excepcion);
+            
+            // Creamos excepción con la traza del error
+            StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, excepcion);
+            
+            // Devolvemos el mapa con el código, mensaje y traza de excepción
+            return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
         }
     }
 
+    @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @GetMapping("/")
-<<<<<<< Updated upstream
     public ResponseEntity<?> obtenerHuelgas(@PageableDefault(size = 5, sort = "titulo") Pageable pageable)
     {
-        try
-        {
-            Page<HuelgaResponseDto> dtoPage = this.huelgaRepository.findHuelgasResponseDto(pageable);
-=======
-    public ResponseEntity<?> obtenerHuelgas(
-            @PageableDefault(size = 5, sort = "titulo") Pageable pageable)
-    {
+
         try
         {
             Page<Huelga> page = this.huelgaRepository.findAll(pageable);
@@ -213,26 +197,22 @@ public class HuelgaRestController
                     huelga.getAlumnos() != null ? (long) huelga.getAlumnos().size() : 0L
             )
     );
->>>>>>> Stashed changes
 
             return ResponseEntity.ok(dtoPage);
         }
         catch (Exception excepcion)
         {
-<<<<<<< Updated upstream
-            log.error("Error obteniendo huelgas", excepcion);
-
-            StrikesServerException ex = new StrikesServerException( Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, excepcion);
-
-            return ResponseEntity.status(500).body(ex.getBodyExceptionMessage());
-=======
-            log.error("Error genérico obtener el/las huelga/s", excepcion);
-            StrikesServerException huelgaExcepcion =
-                    new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR,excepcion);
-
-            return ResponseEntity.status(500).body(huelgaExcepcion.getBodyExceptionMessage());
->>>>>>> Stashed changes
+        	// Logueamos
+            log.error(Constants.ERR_SERVIDOR, excepcion);
+            
+            // Creamos excepción con la traza del error
+            StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, excepcion);
+            
+            // Devolvemos el mapa con el código, mensaje y traza de excepción
+            return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
         }
+        
+
     }
     
     
@@ -242,7 +222,7 @@ public class HuelgaRestController
        
     ========================= */
 
-    private Date toDate(Long fecha) throws StrikesServerException
+    private Date date(Long fecha) throws StrikesServerException
     {
         if (fecha == null || fecha <= 0)
         {
@@ -250,24 +230,31 @@ public class HuelgaRestController
         }
         return new Date(fecha);
     }
+   
 
-    private void validarCrearHuelga(String titulo,Long fechaInicio,Long fechaFin) throws StrikesServerException
+    private void validarCreacionHuelga(HuelgaRequestDto huelgaRequestDto) throws StrikesServerException
     {
-        if (titulo == null || titulo.isEmpty())
+        if (huelgaRequestDto.getTitulo() == null || huelgaRequestDto.getTitulo().isEmpty())
         {
             throw new StrikesServerException(Constants.ERR_HUELGA_TITULO_NULO_VACIO_CODE,Constants.ERR_HUELGA_TITULO_NULO_VACIO_DESC);
         }
 
-        if (fechaInicio == null || fechaInicio <= 0)
+        if (huelgaRequestDto.getFechaInicio() == null || huelgaRequestDto.getFechaInicio() <= 0)
         {
             throw new StrikesServerException(Constants.ERR_HUELGA_FECHA_INICIO_NULA_CODE,Constants.ERR_HUELGA_FECHA_INICIO_NULA_DESC);
         }
+        
+        
 
-        if (fechaFin != null && fechaFin < fechaInicio)
+        if (huelgaRequestDto.getFechaFin() != null && huelgaRequestDto.getFechaFin() < huelgaRequestDto.getFechaInicio())
         {
             throw new StrikesServerException(Constants.ERR_HUELGA_FECHAS_INCOHERENTES_CODE,Constants.ERR_HUELGA_FECHAS_INCOHERENTES_DESC);
         }
-
+        
+        if (this.huelgaRepository.existsById(huelgaRequestDto.getTitulo()))
+        {
+            throw new StrikesServerException(Constants.ERR_HUELGA_EXISTE_CODE, Constants.ERR_HUELGA_EXISTE_DESC);
+        }
     }
     
     private void borrarRecursosGoogle(Huelga huelga) throws Exception

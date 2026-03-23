@@ -47,11 +47,11 @@ public class StrikesServerException extends Exception
      * @param mensaje Mensaje de error
      * @param excepcion Excepción original asociada
      */
-	public StrikesServerException(Integer movieErrorId, String message, Throwable excepcion)
+	public StrikesServerException(Integer codigo, String message, Throwable excepcion)
 	{
 		super(message, excepcion) ;
 		
-		this.codigo=movieErrorId ;
+		this.codigo=codigo ;
 		this.mensaje= message ;
 		this.excepcion= excepcion ;
 	}

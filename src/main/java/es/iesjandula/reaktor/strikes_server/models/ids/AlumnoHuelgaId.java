@@ -37,15 +37,6 @@ public class AlumnoHuelgaId implements Serializable
     /**
      * Título de la huelga
      */
-<<<<<<< Updated upstream
     private String titulo;
 }
-=======
-	private String email ;
-    /**
-     * Título de la huelga.
-     * Forma parte de la clave primaria compuesta.
-     */
-	private String titulo ;
-}
->>>>>>> Stashed changes
+

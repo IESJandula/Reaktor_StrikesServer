@@ -29,7 +29,7 @@ public class AlumnoRestController
     {
         try
         {
-            return ResponseEntity.ok(alumnoRepository.findAll());
+            return ResponseEntity.ok(this.alumnoRepository.findAll());
         }
         catch (Exception exception)
         {
