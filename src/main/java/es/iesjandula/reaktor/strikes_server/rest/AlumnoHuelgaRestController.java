@@ -55,6 +55,7 @@ public class AlumnoHuelgaRestController
     {
         try
         {
+        	// 
             log.info("Procesando inscripción en huelga {} para alumno {} participa {}",
                     alumnoHuelgaRequestDto.getTitulo(), alumnoHuelgaRequestDto.getEmail(), alumnoHuelgaRequestDto.getParticipa());
 
@@ -115,6 +116,7 @@ public class AlumnoHuelgaRestController
         	log.error(Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_DESC);
             throw new StrikesServerException(Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_CODE, Constants.ERR_ALUMNO_EMAIL_NULO_VACIO_DESC);
         }
+
     }
     private Huelga validarHuelgaExiste(AlumnoHuelgaRequestDto alumnoHuelgaRequestDto) throws StrikesServerException
     {
@@ -141,6 +143,7 @@ public class AlumnoHuelgaRestController
     
     private Alumno validarAlumnoExiste(AlumnoHuelgaRequestDto alumnoHuelgaRequestDto) throws StrikesServerException
     {
+    	
     	//Validamos si el alumno existe
         Optional<Alumno> optionalAlumno = alumnoRepository.findById(alumnoHuelgaRequestDto.getEmail()) ;
         

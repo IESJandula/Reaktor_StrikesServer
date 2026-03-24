@@ -5,7 +5,18 @@ import lombok.Data;
 @Data
 public class AlumnoHuelgaRequestDto
 {
-    private String titulo;
-    private String email;
-    private String participa;
+	/**
+     * Título de la huelga.
+     */
+    private String titulo ;
+    
+	/**
+     * Email del alumno.
+     */
+    private String email ;
+    
+	/**
+	 * Respuesta del alumno.
+     */
+    private Boolean participa;
 }

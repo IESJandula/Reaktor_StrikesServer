@@ -84,7 +84,6 @@ public class Constants
     public static final Integer ERR_ALUMNO_EXISTE_CODE = 9;
     public static final String ERR_ALUMNO_EXISTE_DESC = "El alumno ya existe en el sistema.";
 
-    
     /** Código cuando el alumno no existe */
     public static final Integer ERR_ALUMNO_NO_EXISTE_CODE = 10;
     public static final String ERR_ALUMNO_NO_EXISTE_DESC = "El alumno no existe en el sistema.";
@@ -116,7 +115,5 @@ public class Constants
     /** Código para errores generales del servidor */
     public static final Integer ERR_SERVIDOR_CODE = 15;
     public static final String ERR_SERVIDOR = "Se ha producido un error interno en el servidor.";
-
-
 
 }
