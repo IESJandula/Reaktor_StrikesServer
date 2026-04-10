@@ -36,15 +36,14 @@ public interface IHuelgaRepository extends JpaRepository<Huelga, String>
             COUNT(a)
         )
         FROM Huelga h
-        LEFT JOIN h.alumnos a
-        GROUP BY 
-            h.titulo,
-            h.fechaInicio,
-            h.fechaFin,
-            h.estado,
-            h.urlEncuestado
-    """)
-    Page<HuelgaResponseDto> findHuelgasResponseDto(Pageable pageable);
+        LEFT JOIN h.alumnos a 
+        GROUP BY  h.titulo,
+	        h.fechaInicio,
+	        h.fechaFin,
+	        h.estado,
+	        h.urlEncuestado
+        """)
+    Page<HuelgaResponseDto> obtenerHuelgas(Pageable pageable);
 
 
     /**
@@ -54,5 +53,4 @@ public interface IHuelgaRepository extends JpaRepository<Huelga, String>
      * únicamente las huelgas activas (CONVOCADA).
      */
     List<Huelga> findByEstado(EstadoHuelga estado);
-
 }

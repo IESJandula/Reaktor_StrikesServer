@@ -34,6 +34,6 @@ reaktor:
   clientId: strikes
   http_connection_timeout: 30000
   reiniciarParametros: true
-  plantillaFormulario: https://script.google.com/macros/s/AKfycbxBZMx9zV8tmk15DDtmf5bXA9xOzGSaZCtk65E6TorKkUoTfezQJd3PwgkaWNrsLGq05A/exec
-  borrarHuelga: https://script.google.com/macros/s/AKfycbywUgI6wpxu-kfaPl8rKgW90EsBDcMr_n-8X0bq_f1IoonzoDGxAX4Y7Ff0SauqKlMtWQ/exec
+  scriptCreacionConsultaHuelga: https://script.google.com/macros/s/AKfycbw6_P8MN2DD3S9TkBTow29iTeKOviE0oPmdtrisd3kYGE4dMhLUnuyLyjGXRzNVjCSHIw/exec
+  scriptBorradoHuelga: https://script.google.com/macros/s/AKfycbywUgI6wpxu-kfaPl8rKgW90EsBDcMr_n-8X0bq_f1IoonzoDGxAX4Y7Ff0SauqKlMtWQ/exec
 

@@ -34,7 +34,12 @@
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
-    </dependencies>
+		<dependency>
+			<groupId>es.iesjandula.reaktor</groupId>
+			<artifactId>Base</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+	</dependencies>
 
 	<build>
 		<plugins>

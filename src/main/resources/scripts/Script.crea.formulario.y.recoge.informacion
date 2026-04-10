@@ -2,7 +2,8 @@
  * Genera un formulario de huelga a partir de la plantilla
  * Se ejecuta cuando el backend crea una huelga
  */
-function doPost(e) {
+function doPost(e) 
+{
 
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput(
@@ -10,7 +11,7 @@ function doPost(e) {
     ).setMimeType(ContentService.MimeType.JSON);
   }
 
-  //const data = JSON.parse('{ "titulo" : "prueba"}');
+  //const data = JSON.parse('{ "titulo" : "la virgen de la cabeza"}');
   const data = JSON.parse(e.postData.contents);
   const titulo = data.titulo;
 
@@ -39,10 +40,7 @@ function doPost(e) {
 
   // 3. Personalizar título y descripción
   form.setTitle("Inscripción para la huelga " + titulo);
-  form.setDescription(
-    "Formulario de inscripción para la huelga " + titulo
-  );
-
+  form.setDescription("Formulario de inscripción para la huelga " + titulo) ;
 
   // 4. Crear Google Sheet de respuestas
   const spreadsheet = SpreadsheetApp.create(
@@ -50,26 +48,31 @@ function doPost(e) {
   );
 
   // 5. Renombrar la hoja de respuestas
-  spreadsheet.getSheets()[0].setName("Inscripción Huelga "+titulo);
+  const sheetName = "Inscripción Huelga " + titulo;
+  spreadsheet.getSheets()[0].setName(sheetName);
 
   // 6. Conectar Form → Sheet
   form.setDestination(
     FormApp.DestinationType.SPREADSHEET,
     spreadsheet.getId()
   );
+  // Esto hace que el formulario aparezca como "Publicado" 
+  // y sea accesible para los usuarios.
+  form.setPublished(true);
+  form.setAcceptingResponses(true);
 
   // 7. Guardar datos para el scheduler
   const props = PropertiesService.getScriptProperties();
   props.setProperty("SPREADSHEET_ID", spreadsheet.getId());
-  props.setProperty("SHEET_NAME", "Inscripción Huelga");
+  props.setProperty("SHEET_NAME", sheetName);
 
   // 8. Respuesta al backend
   return ContentService.createTextOutput(
     JSON.stringify({
-      formId: form.getId(),
-      formUrl: form.getPublishedUrl(),
-      spreadsheetId: spreadsheet.getId(),
-      sheetName: "Inscripción Huelga"
+      googleFormUrl: form.getPublishedUrl(),
+      googleFormId: form.getId(),
+      googleSpreadsheetId: spreadsheet.getId(),
+      googleSheetName: sheetName
     })
   ).setMimeType(ContentService.MimeType.JSON);
 
@@ -156,7 +159,7 @@ function doGet(request) {
   } catch (error) {
 
     // ==============================
-    // Captura cualquier error real
+    // Captura error
     // ==============================
     return jsonResponse({
       error: "No se pudo acceder al spreadsheet",

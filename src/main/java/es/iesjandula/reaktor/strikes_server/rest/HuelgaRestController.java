@@ -1,8 +1,12 @@
 package es.iesjandula.reaktor.strikes_server.rest;
 
 
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Date;
-import org.springframework.web.reactive.function.client.WebClient;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,8 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,11 +25,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.iesjandula.reaktor.base.utils.BaseConstants;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaRequestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaResponseDto;
+import es.iesjandula.reaktor.strikes_server.dtos.PlantillaResponseDto;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
@@ -47,12 +52,12 @@ public class HuelgaRestController
     private IHuelgaRepository huelgaRepository;
     
 	/** URL permitida de CORS */
-	@Value("${reaktor.plantillaFormulario}")
-	private String plantillaFormulario ;
+	@Value("${reaktor.scriptCreacionConsultaHuelga}")
+	private String scriptCreacionConsultaHuelga ;
 	
 	/** URL permitida de CORS */
-	@Value("${reaktor.borrarHuelga}")
-	private String borrarHuelga ;
+	@Value("${reaktor.scriptBorradoHuelga}")
+	private String scriptBorradoHuelga ;
 
 	@Autowired
 	private WebClient.Builder webClientBuilder;
@@ -63,69 +68,19 @@ public class HuelgaRestController
     {
         try
         {
-        	
-            this.validarCreacionHuelga(huelgaRequestDto);
+        	// Validamos los datos introducidos
+            this.validarCreacionHuelga(huelgaRequestDto) ;
 
-            // ==============================
-            // LLAMAR A GOOGLE APPS SCRIPT
-            // ==============================
-
-            RestTemplate restTemplate = new RestTemplate();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("titulo", huelgaRequestDto.getTitulo());
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(this.plantillaFormulario, request, Map.class);
-
-            Map responseBody = response.getBody();
-
-            if (responseBody == null || responseBody.get("formUrl") == null)
-            {
-                throw new RuntimeException("Error creando recursos en Google");
-            }
-
-            String formUrl = (String) responseBody.get("formUrl");
-            String formId = (String) responseBody.get("formId");
-            String spreadsheetId = (String) responseBody.get("spreadsheetId");
-            String sheetName = (String) responseBody.get("sheetName");
-
-            // ==============================
-            // CREAR ENTIDAD
-            // ==============================
-            Date fechaInicio = this.date(huelgaRequestDto.getFechaInicio());
-            Date fechaFin = this.date(huelgaRequestDto.getFechaFin());
-
-            Huelga huelga = new Huelga();
-            huelga.setTitulo(huelgaRequestDto.getTitulo());
-            huelga.setFechaInicio(fechaInicio);
-            huelga.setFechaFin(fechaFin);
-            huelga.setEstado(EstadoHuelga.CONVOCADA);
-            huelga.setUrlEncuestado(formUrl);
-            huelga.setGoogleFormId(formId);
-            huelga.setGoogleSpreadsheetId(spreadsheetId);
-            huelga.setGoogleSheetName(sheetName);
-
-            this.huelgaRepository.saveAndFlush(huelga);
-
-            HuelgaResponseDto huelgaResponseDto = new HuelgaResponseDto(
-                    huelga.getTitulo(),
-                    huelga.getFechaInicio() != null ? huelga.getFechaInicio().getTime() : null,
-                    huelga.getFechaFin() != null ? huelga.getFechaFin().getTime() : null,
-                    huelga.getEstado() != null ? huelga.getEstado().name() : null,
-                    huelga.getUrlEncuestado(),
-                    0L
-            );
-
-            return ResponseEntity.ok(huelgaResponseDto) ;
+            // Recogemos los datos del formulario
+            PlantillaResponseDto plantillaResponseDto = this.llamarScript(huelgaRequestDto) ;
+           
+            // Creamos la entidad
+            this.crearHuelga(huelgaRequestDto, plantillaResponseDto) ;
+            
+            return ResponseEntity.ok().build() ;
         }
         catch (StrikesServerException excepcion)
         {
-        	
             return ResponseEntity.badRequest().body(excepcion.getBodyExceptionMessage()) ;
         }
         catch (Exception excepcion)
@@ -144,7 +99,7 @@ public class HuelgaRestController
 
     @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @DeleteMapping("/")
-    public ResponseEntity<?> eliminarRecursosGoogle(@RequestHeader("titulo") String titulo)// cambiar a header
+    public ResponseEntity<?> borrarHuelga(@RequestHeader("titulo") String titulo)
     {
         try
         {
@@ -163,17 +118,16 @@ public class HuelgaRestController
                    
 
             // Llamar a Apps Script para borrar Form y Sheet
-            borrarRecursosGoogle(huelga);
+            this.borrarRecursosGoogle(huelga);
+            
+            // Comprobar primero si hay alumnos inscritos a esta huelga para borrar solo de la tabla relación
+            
+           
+            // Borramos la huelga
+            this.huelgaRepository.delete(huelga);
 
-            // Limpiar datos Google en BD
-            huelga.setGoogleFormId(null);
-            huelga.setGoogleSpreadsheetId(null);
-            huelga.setGoogleSheetName(null);
-            huelga.setUrlEncuestado(null);
-
-            this.huelgaRepository.save(huelga);
-
-            return ResponseEntity.ok("Recursos Google eliminados correctamente");
+            // Devolvemos la respuesta
+            return ResponseEntity.ok().build();
         }
         catch (StrikesServerException exception)
         {
@@ -199,20 +153,9 @@ public class HuelgaRestController
 
         try
         {
-            Page<Huelga> page = this.huelgaRepository.findAll(pageable) ;
+            Page<HuelgaResponseDto> pageHuelgaResponseDto = this.huelgaRepository.obtenerHuelgas(pageable) ;
 
-            Page<HuelgaResponseDto> dtoPage = page.map(huelga ->
-            new HuelgaResponseDto(
-                    huelga.getTitulo(),
-                    huelga.getFechaInicio() != null ? huelga.getFechaInicio().getTime() : null,
-                    huelga.getFechaFin() != null ? huelga.getFechaFin().getTime() : null,
-                    huelga.getEstado() != null ? huelga.getEstado().name() : null,
-                    huelga.getUrlEncuestado(),
-                    huelga.getAlumnos() != null ? (long) huelga.getAlumnos().size() : 0L
-            )
-    );
-
-            return ResponseEntity.ok(dtoPage) ;
+            return ResponseEntity.ok(pageHuelgaResponseDto) ;
         }
         catch (Exception excepcion)
         {
@@ -232,8 +175,7 @@ public class HuelgaRestController
     
 
     /* =========================
-       MÉTODOS AUXILIARES
-       
+       MÉTODOS AUXILIARES  
     ========================= */
 
     private Date date(Long fecha) throws StrikesServerException
@@ -274,6 +216,123 @@ public class HuelgaRestController
         }
     }
     
+    private PlantillaResponseDto llamarScript(HuelgaRequestDto huelgaRequestDto) throws StrikesServerException
+    {
+	    try 
+	    {
+	    	 // Crear body
+	        Map<String, Object> body = new HashMap<>() ;
+	        body.put("titulo", huelgaRequestDto.getTitulo()) ;
+
+	        // Convertir a JSON
+	        ObjectMapper objectMapper = new ObjectMapper() ;
+	        String json = objectMapper.writeValueAsString(body) ;
+
+	        // Cliente HTTP con redirects
+	        HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build() ;
+
+	        // Petición
+	        HttpRequest request = HttpRequest.newBuilder()
+	                .uri(URI.create(this.scriptCreacionConsultaHuelga))
+	                .header("Content-Type", "application/json")
+	                .POST(HttpRequest.BodyPublishers.ofString(json))
+	                .build() ;
+
+	        // Ejecutar
+	        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString()) ;
+
+	        String rawResponse = response.body() ;
+
+	        log.info("Respuesta de Google Script: {}", rawResponse);
+
+	        // Validación básica
+	        if (rawResponse == null || rawResponse.isEmpty()) 
+	        {
+	            throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_FORMULARIO_CODE, Constants.ERR_HUELGA_NO_CREA_FORMULARIO_DESC) ;
+	        }
+
+	        // Evitar parsear HTML
+	        if (rawResponse.trim().startsWith("<")) 
+	        {
+	            throw new StrikesServerException( Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR) ;
+	        }
+
+	        // Convertir a DTO
+	        PlantillaResponseDto responseDto = objectMapper.readValue(rawResponse, PlantillaResponseDto.class) ;
+
+	        // Validación de negocio
+	        if (responseDto.getGoogleFormUrl() == null) 
+	        {
+	            throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_FORMULARIO_CODE, Constants.ERR_HUELGA_NO_CREA_FORMULARIO_DESC) ;
+	        }
+	        return responseDto;
+	    } 
+	    catch (StrikesServerException exception) 
+	    {
+	    	log.error(Constants.ERR_HUELGA_EXISTE_DESC) ;
+	        throw new StrikesServerException(Constants.ERR_HUELGA_EXISTE_CODE, Constants.ERR_HUELGA_EXISTE_DESC) ;
+	    } 
+	    catch (Exception exception) 
+	    {
+	        log.error(Constants.ERR_SERVIDOR, exception) ;
+	        throw new StrikesServerException( Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception);
+	    }
+		
+    }
+    
+
+    private void crearHuelga(HuelgaRequestDto huelgaRequestDto, PlantillaResponseDto plantillaResponseDto) throws StrikesServerException
+    {
+    	try
+    	{
+    		// Convertimos el timestamp (Long) a Date para la fecha de inicio
+    		Date fechaInicio = this.date(huelgaRequestDto.getFechaInicio());
+
+    		// Convertimos el timestamp (Long) a Date para la fecha de fin
+    		Date fechaFin = this.date(huelgaRequestDto.getFechaFin());
+
+    		// Creamos la entidad Huelga que se persistirá en base de datos
+    		Huelga huelga = new Huelga();
+
+    		// Asignamos el título recibido en el DTO
+    		huelga.setTitulo(huelgaRequestDto.getTitulo());
+
+    		// Establecemos la fecha de inicio de inscripciones
+    		huelga.setFechaInicio(fechaInicio);
+
+    		// Establecemos la fecha de fin de la huelga
+    		huelga.setFechaFin(fechaFin);
+
+    		// Inicializamos el estado de la huelga como CONVOCADA
+    		huelga.setEstado(EstadoHuelga.CONVOCADA);
+
+    		// Guardamos la URL pública del formulario generado en Google
+    		huelga.setUrlEncuestado(plantillaResponseDto.getGoogleFormUrl());
+
+    		// Guardamos el ID del formulario de Google
+    		huelga.setGoogleFormId(plantillaResponseDto.getGoogleFormId());
+
+    		// Guardamos el ID del spreadsheet asociado al formulario
+    		huelga.setGoogleSpreadsheetId(plantillaResponseDto.getGoogleSpreadsheetId());
+
+    		// Guardamos el nombre de la hoja donde se almacenan las respuestas
+    		huelga.setGoogleSheetName(plantillaResponseDto.getGoogleSheetName());
+
+    		// Persistimos la entidad en base de datos y forzamos sincronización inmediata
+    		this.huelgaRepository.saveAndFlush(huelga);
+    	}
+    	catch (StrikesServerException exception) 
+    	{
+    		log.error(Constants.ERR_HUELGA_NO_CREA_HUELGA_DESC) ;
+    		throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_HUELGA_CODE, Constants.ERR_HUELGA_NO_CREA_HUELGA_DESC) ;
+		}
+    	catch (Exception exception) 
+    	{
+    		log.error(Constants.ERR_HUELGA_NO_CREA_HUELGA_DESC) ;
+    		throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_HUELGA_CODE, Constants.ERR_HUELGA_NO_CREA_HUELGA_DESC) ;
+		}
+    }
+    
     private void borrarRecursosGoogle(Huelga huelga) throws StrikesServerException
     {
         try
@@ -282,15 +341,15 @@ public class HuelgaRestController
             if (huelga.getGoogleFormId() == null || huelga.getGoogleSpreadsheetId() == null)
             {
                 // Log de error indicando que no hay recursos que eliminar
-                log.error("No hay recursos Google para borrar en la huelga {}", huelga.getTitulo());
-                throw new StrikesServerException(Constants.ERR_SERVIDOR_CODE,Constants.ERR_SERVIDOR);
+                log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC);
+                throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE,Constants.ERR_HUELGA_NO_ACTIVA_DESC);
             }
 
             // Creamos el body de la petición que se enviará al Google Apps Script
             Map<String, Object> body = new HashMap<>() ;
 
             // Token de seguridad (para evitar llamadas no autorizadas)
-            body.put("token", "MI_TOKEN_SEGURO") ;
+            body.put("token", "MI_TOKEN_SUPER_SEGURO") ;
 
             // ID del formulario de Google a eliminar
             body.put("formId", huelga.getGoogleFormId()) ;
@@ -299,13 +358,13 @@ public class HuelgaRestController
             body.put("spreadsheetId", huelga.getGoogleSpreadsheetId()) ;
 
             // Construimos y ejecutamos la llamada HTTP al Google Script
-            webClientBuilder.build()
+            String rawResponse = webClientBuilder.build()
 
                 // Indicamos que la petición será POST
                 .post()
 
                 // URL del script
-                .uri(this.borrarHuelga)
+                .uri(this.scriptBorradoHuelga)
 
                 // Indicamos que enviamos JSON
                 .contentType(MediaType.APPLICATION_JSON)
@@ -322,7 +381,12 @@ public class HuelgaRestController
                 // Bloqueamos la ejecución hasta obtener respuesta (modo síncrono)
                 .block();
 
-            log.info("Recursos Google eliminados para la huelga {}", huelga.getTitulo()) ;
+            log.info("Recursos Google eliminados para la huelga {}", rawResponse) ;
+            if (rawResponse == null || rawResponse.isEmpty() || rawResponse.trim().startsWith("<"))
+            {
+            	log.error(Constants.ERR_SERVIDOR) ;
+                throw new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR) ;
+            }
         }
         catch (StrikesServerException exception)
         {
@@ -331,7 +395,7 @@ public class HuelgaRestController
         }
         catch (Exception exception)
         {
-            log.error(Constants.ERR_SERVIDOR, exception);
+            log.error(Constants.ERR_SERVIDOR, exception) ;
             throw new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception) ;
         }
     }

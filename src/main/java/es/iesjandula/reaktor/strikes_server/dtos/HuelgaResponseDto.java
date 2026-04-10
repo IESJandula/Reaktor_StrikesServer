@@ -4,6 +4,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Date;
+
+import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
+
 /**
  * DTO utilizado para enviar información de una huelga
  * desde el backend hacia el cliente.
@@ -20,8 +24,6 @@ public class HuelgaResponseDto
      * Título de la huelga.
      * Identifica de forma única la huelga enviada en la respuesta.
      */
-
-
     private String titulo;
 
     /**
@@ -49,23 +51,15 @@ public class HuelgaResponseDto
      */
     private Long numeroParticipantes;
 
-
-
     /**
      * Constructor utilizado desde el controlador REST.
      */
-    public HuelgaResponseDto(
-            String titulo,
-            Long fechaInicio,
-            Long fechaFin,
-            String estado,
-            String urlEncuestado,
-            Long numeroParticipantes
-    ) {
+    public HuelgaResponseDto(String titulo, Date fechaInicio, Date fechaFin, EstadoHuelga estado, String urlEncuestado, Long numeroParticipantes) 
+    {
         this.titulo = titulo;
-        this.fechaInicio = fechaInicio;
-        this.fechaFin = fechaFin;
-        this.estado = estado;
+        this.fechaInicio = fechaInicio != null ? fechaInicio.getTime() : null;
+        this.fechaFin = fechaFin != null ? fechaFin.getTime() : null;
+        this.estado = estado.name();
         this.urlEncuestado = urlEncuestado;
         this.numeroParticipantes = numeroParticipantes;
     }

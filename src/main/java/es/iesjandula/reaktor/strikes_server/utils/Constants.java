@@ -67,6 +67,14 @@ public class Constants
     /** Código cuando la huelga no está activa */
 	public static final Integer ERR_HUELGA_NO_ACTIVA_CODE = 16;
 	public static final String ERR_HUELGA_NO_ACTIVA_DESC = "La huelga no está abierta a inscripciones";
+	
+    /** Código cuando la huelga no puede crear el formulario */
+	public static final Integer ERR_HUELGA_NO_CREA_FORMULARIO_CODE = 17 ;
+	public static final String ERR_HUELGA_NO_CREA_FORMULARIO_DESC = "Error creando recursos en Google" ;
+	
+    /** Código cuando la huelga no puede crear el formulario */
+	public static final Integer ERR_HUELGA_NO_CREA_HUELGA_CODE = 18 ;
+	public static final String ERR_HUELGA_NO_CREA_HUELGA_DESC = "Error creando recursos en Google" ;
 
     // ========================================
     // Errores de Alumno
@@ -115,5 +123,7 @@ public class Constants
     /** Código para errores generales del servidor */
     public static final Integer ERR_SERVIDOR_CODE = 15;
     public static final String ERR_SERVIDOR = "Se ha producido un error interno en el servidor.";
+
+
 
 }

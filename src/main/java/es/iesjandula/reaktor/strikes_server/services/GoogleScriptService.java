@@ -1,55 +1,53 @@
 package es.iesjandula.reaktor.strikes_server.services;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import es.iesjandula.reaktor.strikes_server.utils.Constants;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class GoogleScriptService
 {
-
-    /**
-     * URL del Apps Script que devuelve respuestas
-     */
-    private static final String GOOGLE_SCRIPT_URL =
-        "https://script.google.com/macros/s/AKfycbxBZMx9zV8tmk15DDtmf5bXA9xOzGSaZCtk65E6TorKkUoTfezQJd3PwgkaWNrsLGq05A/exec";
+	@Value("${reaktor.scriptCreacionConsultaHuelga}")
+	private String scriptCreacionConsultaHuelga ;
 
     private RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * Obtiene las respuestas del Google Sheet
-     */
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> obtenerRespuestas(
-            String spreadsheetId,
-            String sheetName)
+    public List<Map<String, Object>> obtenerRespuestas(String spreadsheetId, String sheetName)
     {
         try
         {
-            String url = GOOGLE_SCRIPT_URL
-                    + "?spreadsheetId=" + spreadsheetId
-                    + "&sheet=" + sheetName;
+            String url = scriptCreacionConsultaHuelga + "?spreadsheetId=" + spreadsheetId  + "&sheet=" + sheetName ;
 
-            Map<String, Object>[] response =
-                    restTemplate.getForObject(url, Map[].class);
+            // Leer como objeto JSON
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 
             if (response == null)
             {
                 return Collections.emptyList();
             }
 
-            return Arrays.asList(response);
+            // Ajusta "data" si tu JSON usa otra clave
+            List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data") ;
+
+            if (data == null)
+            {
+                return Collections.emptyList();
+            }
+
+            return data;
         }
-        catch (Exception e)
+        catch (Exception exception)
         {
-            log.error("Error obteniendo respuestas de Google Script", e);
+            log.error(Constants.ERR_HUELGA_DESC, exception);
             return Collections.emptyList();
         }
     }
