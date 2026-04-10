@@ -28,22 +28,14 @@ public class GoogleScriptService
             String url = scriptCreacionConsultaHuelga + "?spreadsheetId=" + spreadsheetId  + "&sheet=" + sheetName ;
 
             // Leer como objeto JSON
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            List<Map<String, Object>> response = restTemplate.getForObject(url, List.class);
 
             if (response == null)
             {
                 return Collections.emptyList();
             }
 
-            // Ajusta "data" si tu JSON usa otra clave
-            List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data") ;
-
-            if (data == null)
-            {
-                return Collections.emptyList();
-            }
-
-            return data;
+            return response;
         }
         catch (Exception exception)
         {

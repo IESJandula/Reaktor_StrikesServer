@@ -1,0 +1,59 @@
+function doPost(e) {
+
+  if (!e || !e.postData || !e.postData.contents) {
+    return jsonResponse({ error: "Petición inválida" });
+  }
+
+  let data;
+
+  try {
+    data = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse({ error: "JSON inválido" });
+  }
+
+  // ==============================
+  // Validar token
+  // ==============================
+  const SECRET = "MI_TOKEN_SUPER_SEGURO";
+
+  if (!data.token || data.token !== SECRET) {
+    return jsonResponse({
+      success: false,
+      error: "No autorizado"
+    });
+  }
+
+  if (!data.formId || !data.spreadsheetId) {
+    return jsonResponse({
+      error: "Faltan formId o spreadsheetId"
+    });
+  }
+
+  try {
+
+    const formFile = DriveApp.getFileById(data.formId);
+    const sheetFile = DriveApp.getFileById(data.spreadsheetId);
+
+    if (!formFile.isTrashed()) {
+      formFile.setTrashed(true);
+    }
+
+    if (!sheetFile.isTrashed()) {
+      sheetFile.setTrashed(true);
+    }
+
+    return jsonResponse({
+      success: true,
+      message: "Recursos enviados a la papelera correctamente"
+    });
+
+  } catch (error) {
+
+    return jsonResponse({
+      success: false,
+      error: "Error interno",
+      details: error.toString()
+    });
+  }
+}

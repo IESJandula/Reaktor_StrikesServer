@@ -9,13 +9,13 @@ import java.net.http.HttpResponse;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -58,9 +57,6 @@ public class HuelgaRestController
 	/** URL permitida de CORS */
 	@Value("${reaktor.scriptBorradoHuelga}")
 	private String scriptBorradoHuelga ;
-
-	@Autowired
-	private WebClient.Builder webClientBuilder;
 	
     @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @PostMapping(value = "/", consumes = "application/json")
@@ -70,9 +66,25 @@ public class HuelgaRestController
         {
         	// Validamos los datos introducidos
             this.validarCreacionHuelga(huelgaRequestDto) ;
+            
+            // Busco en base de datos si la huelga ya existe, si existe debe devolver la PlantillaResponseDto
+            Optional<Huelga> optionalHuelga = this.huelgaRepository.findById(huelgaRequestDto.getTitulo()) ;
 
             // Recogemos los datos del formulario
-            PlantillaResponseDto plantillaResponseDto = this.llamarScript(huelgaRequestDto) ;
+            PlantillaResponseDto plantillaResponseDto = null  ;
+            if (optionalHuelga.isPresent())
+            {
+            	Huelga huelga = optionalHuelga.get() ;
+                plantillaResponseDto = new PlantillaResponseDto() ;
+                plantillaResponseDto.setGoogleFormUrl(huelga.getUrlEncuestado()) ;
+                plantillaResponseDto.setGoogleFormId(huelga.getGoogleFormId()) ;
+                plantillaResponseDto.setGoogleSpreadsheetId(huelga.getGoogleSpreadsheetId()) ;
+                plantillaResponseDto.setGoogleSheetName(huelga.getGoogleSheetName()) ;
+            }
+            else
+            {
+                plantillaResponseDto = this.llamarScript(huelgaRequestDto) ;
+            }
            
             // Creamos la entidad
             this.crearHuelga(huelgaRequestDto, plantillaResponseDto) ;
@@ -209,11 +221,6 @@ public class HuelgaRestController
             throw new StrikesServerException(Constants.ERR_HUELGA_FECHAS_INCOHERENTES_CODE,Constants.ERR_HUELGA_FECHAS_INCOHERENTES_DESC) ;
         }
         
-        if (this.huelgaRepository.existsById(huelgaRequestDto.getTitulo()))
-        {
-        	log.error(Constants.ERR_HUELGA_EXISTE_DESC);
-            throw new StrikesServerException(Constants.ERR_HUELGA_EXISTE_CODE, Constants.ERR_HUELGA_EXISTE_DESC) ;
-        }
     }
     
     private PlantillaResponseDto llamarScript(HuelgaRequestDto huelgaRequestDto) throws StrikesServerException
@@ -357,31 +364,24 @@ public class HuelgaRestController
             // ID del spreadsheet asociado al formulario
             body.put("spreadsheetId", huelga.getGoogleSpreadsheetId()) ;
 
-            // Construimos y ejecutamos la llamada HTTP al Google Script
-            String rawResponse = webClientBuilder.build()
+            // Lo convertimos a JSON
+            ObjectMapper objectMapper = new ObjectMapper() ;
+            String json = objectMapper.writeValueAsString(body) ;
 
-                // Indicamos que la petición será POST
-                .post()
+            HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build() ;
+            
+            // Creamos request
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(this.scriptBorradoHuelga))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
+            // Ejecutamos la petición
+            HttpResponse<String> response =client.send(request, HttpResponse.BodyHandlers.ofString()) ;
 
-                // URL del script
-                .uri(this.scriptBorradoHuelga)
-
-                // Indicamos que enviamos JSON
-                .contentType(MediaType.APPLICATION_JSON)
-
-                // Enviamos el body con los datos necesarios
-                .bodyValue(body)
-
-                // Ejecutamos la petición HTTP
-                .retrieve()
-
-                // Convertimos la respuesta del servidor a String
-                .bodyToMono(String.class)
-
-                // Bloqueamos la ejecución hasta obtener respuesta (modo síncrono)
-                .block();
-
-            log.info("Recursos Google eliminados para la huelga {}", rawResponse) ;
+            String rawResponse = response.body();
+            
+            log.info("Recursos Google eliminados para la huelga") ;
             if (rawResponse == null || rawResponse.isEmpty() || rawResponse.trim().startsWith("<"))
             {
             	log.error(Constants.ERR_SERVIDOR) ;
@@ -390,8 +390,9 @@ public class HuelgaRestController
         }
         catch (StrikesServerException exception)
         {
-        	log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
-            throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+        	throw exception;
+        	//log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+            //throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
         }
         catch (Exception exception)
         {
