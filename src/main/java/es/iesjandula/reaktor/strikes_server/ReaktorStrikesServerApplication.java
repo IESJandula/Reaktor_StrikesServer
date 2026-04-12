@@ -27,8 +27,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 public class ReaktorStrikesServerApplication
 {
-
-	
 	public static void main(String[] args)
 	{
 		SpringApplication.run(ReaktorStrikesServerApplication.class, args) ;

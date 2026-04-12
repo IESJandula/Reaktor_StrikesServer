@@ -4,6 +4,7 @@
  */
 function doPost(e) 
 {
+  const FOLDER_ID = "12345678" ; // _ProyectoHuelgas_
 
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput(
@@ -23,14 +24,16 @@ function doPost(e)
 
   // ID de la plantilla 
   const TEMPLATE_FORM_ID =
-    "1i3IkmsMzN9QBOTsn7SnbIi7U-pYth4rXd-jFrEOASEc";
+    "12345678";
 
   //autorizar();
 
+  // 0. Moverme a la carpeta pública
+  const folder = DriveApp.getFolderById(FOLDER_ID);
+  
   // 1. Copiar la plantilla
-  const copiedFile = DriveApp
-    .getFileById(TEMPLATE_FORM_ID)
-    .makeCopy("Inscripción Huelga " + titulo);
+  const copiedFile = DriveApp.getFileById(TEMPLATE_FORM_ID)
+                             .makeCopy("Inscripción Huelga " + titulo, folder);
 
   // 2. Abrir el nuevo formulario
   const form = FormApp.openById(copiedFile.getId());
@@ -47,11 +50,15 @@ function doPost(e)
     "Inscripción Huelga "+ titulo +" (respuestas)"
   );
 
-  // 5. Renombrar la hoja de respuestas
+  // 5. Movemos la hoja de cálculo a la carpeta
+  const sheetFile = DriveApp.getFileById(spreadsheet.getId());
+  sheetFile.moveTo(folder);
+
+  // 6. Renombrar la hoja de respuestas
   const sheetName = "Inscripción Huelga " + titulo;
   spreadsheet.getSheets()[0].setName(sheetName);
 
-  // 6. Conectar Form → Sheet
+  // 7. Conectar Form → Sheet
   form.setDestination(
     FormApp.DestinationType.SPREADSHEET,
     spreadsheet.getId()
@@ -61,12 +68,12 @@ function doPost(e)
   form.setPublished(true);
   form.setAcceptingResponses(true);
 
-  // 7. Guardar datos para el scheduler
+  // 8. Guardar datos para el scheduler
   const props = PropertiesService.getScriptProperties();
   props.setProperty("SPREADSHEET_ID", spreadsheet.getId());
   props.setProperty("SHEET_NAME", sheetName);
 
-  // 8. Respuesta al backend
+  // 9. Respuesta al backend
   return ContentService.createTextOutput(
     JSON.stringify({
       googleFormUrl: form.getPublishedUrl(),
@@ -75,12 +82,6 @@ function doPost(e)
       googleSheetName: sheetName
     })
   ).setMimeType(ContentService.MimeType.JSON);
-
-  //function autorizar() {
-  //DriveApp.getFiles();
-  //FormApp.openById("1i3IkmsMzN9QBOTsn7SnbIi7U-pYth4rXd-jFrEOASEc");
-  //SpreadsheetApp.create("test permisos");
-  //}
 }
 
 /**
