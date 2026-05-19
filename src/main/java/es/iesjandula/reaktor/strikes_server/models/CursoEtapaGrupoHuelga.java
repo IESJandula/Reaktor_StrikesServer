@@ -33,31 +33,23 @@ public class CursoEtapaGrupoHuelga
     @EmbeddedId
     private CursoEtapaGrupoHuelgaId cursoEtapaGrupoHuelgaId ;
 
-    /**
-     * Curso, etapa y grupo al que pertenece la relación.
-     */
+    /** Curso etapa grupo */
     @ManyToOne
     @JoinColumns({
-        @JoinColumn(name = "curso", referencedColumnName = "curso"),
-        @JoinColumn(name = "etapa", referencedColumnName = "etapa"),
-        @JoinColumn(name = "grupo", referencedColumnName = "grupo")
+        @JoinColumn(name = "curso", referencedColumnName = "curso", insertable = false, updatable = false),
+        @JoinColumn(name = "etapa", referencedColumnName = "etapa", insertable = false, updatable = false),
+        @JoinColumn(name = "grupo", referencedColumnName = "grupo", insertable = false, updatable = false)
     })
     private CursoEtapaGrupo cursoEtapaGrupo;
 
     /**
      * Huelga convocada.
-     * <p>
-     * Relación de tipo code ManyToOne con Huelga.
-     * El atributo MapsId("titulo") indica que este campo
-     * forma parte de la clave primaria compuesta.
-     * </p>
      */
     @ManyToOne
     @MapsId("titulo") 
     @JoinColumn(name = "titulo", nullable = false)
     private Huelga huelga ;
 
-    
 	/**
 	 * Año escolar en el que se produce la huelga
 	 */

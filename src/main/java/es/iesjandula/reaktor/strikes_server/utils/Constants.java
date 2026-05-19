@@ -76,6 +76,25 @@ public class Constants
 	public static final Integer ERR_HUELGA_NO_CREA_HUELGA_CODE = 18 ;
 	public static final String ERR_HUELGA_NO_CREA_HUELGA_DESC = "Error creando recursos en Google" ;
 
+	/** Código cuando la huelga no se puede borrar porque ya esta finalizada */
+	public static final Integer ERR_HUELGA_FINALIZA_CODE = 19 ;
+	public static final String ERR_HUELGA_FINALIZA_DESC = "Huelga ya finalizada, no se puede borrar" ;
+	
+	/** Código cuando la huelga no se puede borrar porque esta en curso */
+	public static final Integer ERR_HUELGA_EN_CURSO_CODE = 20 ;
+	public static final String ERR_HUELGA_EN_CURSO_DESC = "Huelga en curso, no se puede borrar" ;
+	
+	/** Código cuando no encuentra el ID del Form asociado a la huelga */
+	public static final Integer ERR_HUELGA_FORM_NO_EXISTE_CODE = 21 ;
+	public static final String ERR_HUELGA_FORM_NO_EXISTE_DESC = "Huelga en curso, no se puede borrar" ;
+	
+	/** Código cuando no encuentra el ID del Sheet asociado a la huelga */
+	public static final Integer ERR_HUELGA_SHEET_NO_EXISTE_CODE = 22 ;
+	public static final String ERR_HUELGA_SHEET_NO_EXISTE_DESC = "Huelga en curso, no se puede borrar" ;
+	
+	/** Código cuando ya hay alumnos inscritos a la huelga */
+	public static final Integer ERR_HUELGA_CON_INSCRITOS_CODE = 23  ;
+	public static final String ERR_HUELGA_CON_INSCRITOS_DESC = "No se puede borrar la huelga porque tiene alumnos inscritos";
     // ========================================
     // Errores de Alumno
     // ========================================
@@ -123,6 +142,10 @@ public class Constants
     /** Código para errores generales del servidor */
     public static final Integer ERR_SERVIDOR_CODE = 15;
     public static final String ERR_SERVIDOR = "Se ha producido un error interno en el servidor.";
+
+	
+
+	
 
 
 

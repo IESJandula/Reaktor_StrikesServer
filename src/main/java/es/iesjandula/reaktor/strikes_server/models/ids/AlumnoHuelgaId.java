@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,6 +16,7 @@ import lombok.Setter;
  * - email del alumno
  * - título de la huelga
  */
+@EqualsAndHashCode
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,5 +40,6 @@ public class AlumnoHuelgaId implements Serializable
      * Título de la huelga
      */
     private String titulo;
+    
 }
 

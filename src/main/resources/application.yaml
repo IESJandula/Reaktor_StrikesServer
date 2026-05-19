@@ -1,7 +1,7 @@
 spring:
   application:
     name: reaktor-strikesServer
-  jpa.hibernate.ddl-auto: create
+  jpa.hibernate.ddl-auto: update
   datasource:
     url: jdbc:mysql://localhost:3306/reaktor_strikesserver?createDatabaseIfNotExist=true
     username: root
@@ -41,8 +41,8 @@ reaktor:
   clientId: strikes
   http_connection_timeout: 30000
   reiniciarParametros: true
-  scriptCreacionConsultaHuelga: https://script.google.com/macros/s/AKfycbzmqvPz-vxcNUVwTbkKVIp6XaaIM53UQAqzkFvKQNPjjLh1AcBic4Kdd9jWff6GMIS-3w/exec
-  scriptBorradoHuelga: https://script.google.com/macros/s/AKfycbywUgI6wpxu-kfaPl8rKgW90EsBDcMr_n-8X0bq_f1IoonzoDGxAX4Y7Ff0SauqKlMtWQ/exec
+  scriptCreacionConsultaHuelga: https://script.google.com/macros/s/AKfycbwPn-CWnqa6OZ34dfWt7zN4FtivRXMGq-a2HiI64Y6RFkvRsy8DPkWKcOwsURIZCo4tMQ/exec
+  scriptBorradoHuelga: https://script.google.com/macros/s/AKfycbwa8s5YFV-lstg6GFuNQ79SvRgo5vT-o0dGjYxi1hhh_TAjMau6Dzx17MJV88ksaxmpYQ/exec
   audit:
     exchange: audit.exchange
     routing-key: audit.key

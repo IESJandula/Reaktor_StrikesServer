@@ -6,7 +6,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Clase principal de la aplicación Reaktor Events Server.
+ * Clase principal de la aplicación Reaktor Strikes Server.
  * <p>
  * Esta clase arranca la aplicación Spring Boot y configura el escaneo de
  * componentes dentro del paquete "es.iesjandula". También habilita la

@@ -1,7 +1,5 @@
 package es.iesjandula.reaktor.strikes_server.rest;
 
-
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -34,6 +32,7 @@ import es.iesjandula.reaktor.strikes_server.dtos.HuelgaResponseDto;
 import es.iesjandula.reaktor.strikes_server.dtos.PlantillaResponseDto;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
+import es.iesjandula.reaktor.strikes_server.repository.IAlumnoHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.utils.Constants;
 import es.iesjandula.reaktor.strikes_server.utils.StrikesServerException;
@@ -49,6 +48,8 @@ public class HuelgaRestController
 {
     @Autowired
     private IHuelgaRepository huelgaRepository;
+    @Autowired
+    private IAlumnoHuelgaRepository alumnoHuelgaRepository;
     
 	/** URL permitida de CORS */
 	@Value("${reaktor.scriptCreacionConsultaHuelga}")
@@ -127,13 +128,34 @@ public class HuelgaRestController
                 log.error(Constants.ERR_HUELGA_NO_EXISTE_DESC);
                 return new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE,Constants.ERR_HUELGA_NO_EXISTE_DESC);
             });
-                   
+
+            Date hoy = new Date();
+
+	        // NO borrar si está en curso
+	        if (hoy.after(huelga.getFechaInicio()) && hoy.before(huelga.getFechaFin()))
+	        {
+	            log.error(Constants.ERR_HUELGA_EN_CURSO_DESC, huelga.getTitulo());
+	            throw new StrikesServerException(Constants.ERR_HUELGA_EN_CURSO_CODE,Constants.ERR_HUELGA_EN_CURSO_DESC);
+	        }
+	
+	        // NO borrar si ya ha finalizado
+	        if (hoy.after(huelga.getFechaFin()))
+	        {
+	            log.error(Constants.ERR_HUELGA_FINALIZA_DESC, huelga.getTitulo());
+	            throw new StrikesServerException(Constants.ERR_HUELGA_FINALIZA_CODE,Constants.ERR_HUELGA_FINALIZA_DESC);
+	        }
 
             // Llamar a Apps Script para borrar Form y Sheet
             this.borrarRecursosGoogle(huelga);
             
             // Comprobar primero si hay alumnos inscritos a esta huelga para borrar solo de la tabla relación
-            
+         // Comprobar primero si hay alumnos inscritos a esta huelga
+            if (this.alumnoHuelgaRepository.existsByAlumnoHuelgaIdTitulo(titulo))
+            {
+                log.info("Borrando relaciones alumno_huelga de la huelga {}", titulo);
+                // Borrar solo las relaciones
+                this.alumnoHuelgaRepository.deleteByAlumnoHuelgaIdTitulo(titulo);
+            }
            
             // Borramos la huelga
             this.huelgaRepository.delete(huelga);
@@ -267,7 +289,7 @@ public class HuelgaRestController
 	        // Convertir a DTO
 	        PlantillaResponseDto responseDto = objectMapper.readValue(rawResponse, PlantillaResponseDto.class) ;
 
-	        // Validación de negocio
+	        // Validación 
 	        if (responseDto.getGoogleFormUrl() == null) 
 	        {
 	            throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_FORMULARIO_CODE, Constants.ERR_HUELGA_NO_CREA_FORMULARIO_DESC) ;
@@ -359,10 +381,10 @@ public class HuelgaRestController
             body.put("token", "MI_TOKEN_SUPER_SEGURO") ;
 
             // ID del formulario de Google a eliminar
-            body.put("formId", huelga.getGoogleFormId()) ;
+            body.put("googleFormId", huelga.getGoogleFormId()) ;
 
             // ID del spreadsheet asociado al formulario
-            body.put("spreadsheetId", huelga.getGoogleSpreadsheetId()) ;
+            body.put("googleSpreadsheetId", huelga.getGoogleSpreadsheetId()) ;
 
             // Lo convertimos a JSON
             ObjectMapper objectMapper = new ObjectMapper() ;
@@ -378,7 +400,6 @@ public class HuelgaRestController
                     .build();
             // Ejecutamos la petición
             HttpResponse<String> response =client.send(request, HttpResponse.BodyHandlers.ofString()) ;
-
             String rawResponse = response.body();
             
             log.info("Recursos Google eliminados para la huelga") ;
@@ -390,9 +411,9 @@ public class HuelgaRestController
         }
         catch (StrikesServerException exception)
         {
-        	throw exception;
-        	//log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
-            //throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+        	
+        	log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+            throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
         }
         catch (Exception exception)
         {

@@ -1,23 +1,28 @@
 package es.iesjandula.reaktor.strikes_server.rest;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import es.iesjandula.reaktor.base.utils.BaseConstants;
 import es.iesjandula.reaktor.strikes_server.dtos.AlumnoHuelgaRequestDto;
+import es.iesjandula.reaktor.strikes_server.dtos.AlumnoHuelgaResponseDto;
 import es.iesjandula.reaktor.strikes_server.models.Alumno;
-import es.iesjandula.reaktor.strikes_server.models.AlumnoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
-import es.iesjandula.reaktor.strikes_server.models.ids.AlumnoHuelgaId;
 import es.iesjandula.reaktor.strikes_server.repository.IAlumnoHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IAlumnoRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
+import es.iesjandula.reaktor.strikes_server.services.AlumnoHuelgaService;
 import es.iesjandula.reaktor.strikes_server.utils.Constants;
 import es.iesjandula.reaktor.strikes_server.utils.StrikesServerException;
 import lombok.extern.slf4j.Slf4j;
@@ -27,35 +32,35 @@ import lombok.extern.slf4j.Slf4j;
  * y sus inscripciones en huelgas.
  */
 @RestController
-@RequestMapping("/strikes/alumnos")
+@RequestMapping("/strikes/inscripciones")
 @Slf4j
 public class AlumnoHuelgaRestController
 {
     @Autowired
     private IAlumnoRepository alumnoRepository;
+    
 
     @Autowired
     private IHuelgaRepository huelgaRepository;
 
     @Autowired
     private IAlumnoHuelgaRepository alumnoHuelgaRepository;
+    
+    @Autowired
+    private AlumnoHuelgaService alumnoHuelgaService;
 
     /**
      * Endpoint que registra la inscripción de un alumno en una huelga.
      * Este endpoint es llamado por el scheduler cuando detecta una nueva
      * respuesta en el Google Sheet.
-     *
-     * Recibe:
-     *  - titulo   → título de la huelga
-     *  - email    → email del alumno
-     *  - decision → SI / NO (si secunda la huelga)
      */
+    
+    @PreAuthorize("hasAnyRole('"+BaseConstants.ROLE_PROFESOR+"')")
     @PostMapping("/inscripcion")
     public ResponseEntity<?> registrarInscripcion(@RequestBody AlumnoHuelgaRequestDto alumnoHuelgaRequestDto)
     {
         try
         {
-        	// 
             log.info("Procesando inscripción en huelga {} para alumno {} participa {}",
                     alumnoHuelgaRequestDto.getTitulo(), alumnoHuelgaRequestDto.getEmail(), alumnoHuelgaRequestDto.getParticipa());
 
@@ -66,26 +71,14 @@ public class AlumnoHuelgaRestController
             Huelga huelga = this.validarHuelgaExiste(alumnoHuelgaRequestDto) ;
             
             // Validamos si existe el alumno
-            Alumno alumno = this.validarAlumnoExiste(alumnoHuelgaRequestDto) ;             
-
-            // Creamos la clave primaria
-            AlumnoHuelgaId alumnoHuelgaId = new AlumnoHuelgaId(alumnoHuelgaRequestDto.getEmail(), alumnoHuelgaRequestDto.getTitulo());
-
-            // crear relación alumno-huelga
-            AlumnoHuelga alumnoHuelga = new AlumnoHuelga();
-            alumnoHuelga.setAlumnoHuelgaId(alumnoHuelgaId);
-            alumnoHuelga.setAlumno(alumno);
-            alumnoHuelga.setHuelga(huelga);
-
-            this.alumnoHuelgaRepository.saveAndFlush(alumnoHuelga);
-
-            log.info("Inscripción guardada correctamente");
-
-            return ResponseEntity.ok().build();
+            Alumno alumno = this.validarAlumnoExiste(alumnoHuelgaRequestDto) ;
+            
+            alumnoHuelgaService.registrarOActualizar(huelga,alumno, alumnoHuelgaRequestDto.getParticipa()) ;
+            return ResponseEntity.ok().build() ;
         }
         catch (StrikesServerException exception)
         {
-            return ResponseEntity.badRequest().body(exception.getBodyExceptionMessage());
+            return ResponseEntity.badRequest().body(exception.getBodyExceptionMessage()) ;
         }
         catch (Exception exception)
         {
@@ -96,6 +89,70 @@ public class AlumnoHuelgaRestController
             StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception);
             
             // Devolvemos el mapa con el código, mensaje y traza de excepción
+            return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
+        }
+    }
+    
+    /**
+     * Endpoint que obtiene los alumnos de una huelga filtrados
+     * por curso, etapa, grupo y tipo de participación.
+     *
+     * Recibe:
+     *  - titulo → título de la huelga
+     *  - curso  → curso del alumno
+     *  - etapa  → etapa educativa
+     *  - grupo  → grupo del alumno
+     *  - filtro → tipo de filtro (TODOS, SI, NO, NS)
+     *
+     * Devuelve:
+     *  - Lista de alumnos con su estado de participación
+     */
+    @PreAuthorize("hasAnyRole('"+BaseConstants.ROLE_PROFESOR+"')")
+    @GetMapping("/consulta")
+    public ResponseEntity<?> obtenerAlumnosHuelga(@RequestHeader("titulo") String titulo, @RequestHeader("curso") String curso, @RequestHeader("etapa") String etapa, @RequestHeader("grupo") String grupo, @RequestHeader("filtro") String filtro)
+    {
+        try
+        {
+            List<AlumnoHuelgaResponseDto> alumnos;
+
+            // Seleccionamos la query en función del filtro recibido
+            switch (filtro)
+            {
+                case "SI":
+                    // Solo alumnos que participan en la huelga
+                    alumnos = this.alumnoHuelgaRepository.obtenerSi(titulo, curso, etapa, grupo);
+                    break;
+
+                case "NO":
+                    // Solo alumnos que NO participan en la huelga
+                    alumnos = this.alumnoHuelgaRepository.obtenerNo(titulo, curso, etapa, grupo);
+                    break;
+
+                case "NS":
+                    // Alumnos que no han respondido al formulario
+                    alumnos = this.alumnoHuelgaRepository.obtenerNs(titulo, curso, etapa, grupo);
+                    break;
+
+                default:
+                    // Todos los alumnos con su estado (SI / NO / NS)
+                    alumnos = this.alumnoHuelgaRepository.obtenerTodos(titulo, curso, etapa, grupo);
+                    break;
+            }
+
+            // Log con número de resultados obtenidos
+            log.info("Número de alumnos obtenidos: {}", alumnos.size());
+
+            // Devolvemos la lista
+            return ResponseEntity.ok(alumnos);
+        }
+        catch (Exception exception)
+        {
+            // Logueamos el error
+            log.error(Constants.ERR_SERVIDOR, exception);
+            // Creamos excepción con la traza del error
+            StrikesServerException strikesServerException = new StrikesServerException(Constants.ERR_SERVIDOR_CODE,Constants.ERR_SERVIDOR,exception);
+
+            // Devolvemos el error
             return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
         }
     }
