@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +24,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import es.iesjandula.reaktor.base.security.models.DtoUsuarioExtended;
 import es.iesjandula.reaktor.base.utils.BaseConstants;
+import es.iesjandula.reaktor.strikes_server.dtos.EventoHuelgaResquestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaRequestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaResponseDto;
 import es.iesjandula.reaktor.strikes_server.dtos.PlantillaResponseDto;
@@ -50,6 +54,8 @@ public class HuelgaRestController
     private IHuelgaRepository huelgaRepository;
     @Autowired
     private IAlumnoHuelgaRepository alumnoHuelgaRepository;
+    @Autowired
+    private WebClient.Builder webClientBuilder;
     
 	/** URL permitida de CORS */
 	@Value("${reaktor.scriptCreacionConsultaHuelga}")
@@ -61,7 +67,7 @@ public class HuelgaRestController
 	
     @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @PostMapping(value = "/", consumes = "application/json")
-    public ResponseEntity<?> crearHuelga(@RequestBody HuelgaRequestDto huelgaRequestDto)
+    public ResponseEntity<?> crearHuelga(@RequestHeader("Authorization") String authorization, @AuthenticationPrincipal DtoUsuarioExtended usuario, @RequestBody HuelgaRequestDto huelgaRequestDto)
     {
         try
         {
@@ -88,7 +94,7 @@ public class HuelgaRestController
             }
            
             // Creamos la entidad
-            this.crearHuelga(huelgaRequestDto, plantillaResponseDto) ;
+            this.crearHuelga(huelgaRequestDto, plantillaResponseDto, authorization) ;
             
             return ResponseEntity.ok().build() ;
         }
@@ -159,6 +165,9 @@ public class HuelgaRestController
            
             // Borramos la huelga
             this.huelgaRepository.delete(huelga);
+            
+            // Eliminar evento del calendario
+            this.borrarEventoCalendario(huelga);
 
             // Devolvemos la respuesta
             return ResponseEntity.ok().build();
@@ -184,11 +193,9 @@ public class HuelgaRestController
     @GetMapping("/")
     public ResponseEntity<?> obtenerHuelgas(@PageableDefault(size = 5, sort = "titulo") Pageable pageable)
     {
-
         try
         {
             Page<HuelgaResponseDto> pageHuelgaResponseDto = this.huelgaRepository.obtenerHuelgas(pageable) ;
-
             return ResponseEntity.ok(pageHuelgaResponseDto) ;
         }
         catch (Exception excepcion)
@@ -202,8 +209,6 @@ public class HuelgaRestController
             // Devolvemos el mapa con el código, mensaje y traza de excepción
             return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage()) ;
         }
-        
-
     }
     
     
@@ -310,7 +315,7 @@ public class HuelgaRestController
     }
     
 
-    private void crearHuelga(HuelgaRequestDto huelgaRequestDto, PlantillaResponseDto plantillaResponseDto) throws StrikesServerException
+    private void crearHuelga(HuelgaRequestDto huelgaRequestDto, PlantillaResponseDto plantillaResponseDto, String authorization) throws StrikesServerException
     {
     	try
     	{
@@ -349,6 +354,9 @@ public class HuelgaRestController
 
     		// Persistimos la entidad en base de datos y forzamos sincronización inmediata
     		this.huelgaRepository.saveAndFlush(huelga);
+    		
+    		// Crear evento en calendario
+    		this.crearEventoCalendario(huelga, authorization);
     	}
     	catch (StrikesServerException exception) 
     	{
@@ -422,4 +430,40 @@ public class HuelgaRestController
         }
     }
     
+    /**
+     * Comunica la huelga al microservicio de eventos
+     * para que aparezca en el calendario.
+     */
+    private void crearEventoCalendario(Huelga huelga, String authorization)
+    {
+    	 EventoHuelgaResquestDto eventoHuelgaRequestDto = new EventoHuelgaResquestDto(
+    		            huelga.getTitulo(),
+    		            huelga.getFechaInicio().getTime(),
+    		            huelga.getFechaFin().getTime());
+
+    		    webClientBuilder.build()
+    		        .post()
+    		        .uri("http://localhost:8082/events/manager/huelga")
+    		        .header("Authorization", authorization)
+    		        .bodyValue(eventoHuelgaRequestDto)
+    		        .retrieve()
+    		        .bodyToMono(Void.class)
+    		        .block();
+    }
+    
+    /**
+     * Elimina el evento asociado a la huelga
+     * del microservicio de eventos.
+     */
+    private void borrarEventoCalendario(Huelga huelga)
+    {
+        webClientBuilder.build()
+            .delete()
+            .uri("http://localhost:8082/events/manager/")
+            .header("titulo", huelga.getTitulo())
+            .header("fechaInicio", String.valueOf(huelga.getFechaInicio().getTime()))
+            .retrieve()
+            .bodyToMono(Void.class)
+            .block();
+    }
 }

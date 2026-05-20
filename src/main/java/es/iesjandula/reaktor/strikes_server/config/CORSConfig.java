@@ -1,4 +1,4 @@
-package es.iesjandula.reaktor.strikes_server.utils.config;
+package es.iesjandula.reaktor.strikes_server.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

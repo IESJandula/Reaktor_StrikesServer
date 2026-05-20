@@ -110,11 +110,4 @@ public class Huelga
      */
     @OneToMany(mappedBy = "huelga", fetch = FetchType.LAZY)
     private List<AlumnoHuelga> alumnos ;
-
-    /**
-     * Lista de cursos que pueden participar en la huelga.
-     */
-    @OneToMany(mappedBy = "huelga", fetch = FetchType.LAZY)
-    private List<CursoEtapaGrupoHuelga> cursos ;
-    
 }
