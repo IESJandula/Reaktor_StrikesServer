@@ -1,7 +1,5 @@
 package es.iesjandula.reaktor.strikes_server.rest;
 
-
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,12 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import es.iesjandula.reaktor.base.security.models.DtoUsuarioExtended;
 import es.iesjandula.reaktor.base.utils.BaseConstants;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaRequestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaResponseDto;
 import es.iesjandula.reaktor.strikes_server.dtos.PlantillaResponseDto;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
+import es.iesjandula.reaktor.strikes_server.repository.IAlumnoHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.utils.Constants;
 import es.iesjandula.reaktor.strikes_server.utils.StrikesServerException;
@@ -49,6 +50,8 @@ public class HuelgaRestController
 {
     @Autowired
     private IHuelgaRepository huelgaRepository;
+    @Autowired
+    private IAlumnoHuelgaRepository alumnoHuelgaRepository;
     
 	/** URL permitida de CORS */
 	@Value("${reaktor.scriptCreacionConsultaHuelga}")
@@ -60,7 +63,7 @@ public class HuelgaRestController
 	
     @PreAuthorize("hasAnyRole('" + BaseConstants.ROLE_PROFESOR + "')")
     @PostMapping(value = "/", consumes = "application/json")
-    public ResponseEntity<?> crearHuelga(@RequestBody HuelgaRequestDto huelgaRequestDto)
+    public ResponseEntity<?> crearHuelga(@RequestHeader("Authorization") String authorization, @AuthenticationPrincipal DtoUsuarioExtended usuario, @RequestBody HuelgaRequestDto huelgaRequestDto)
     {
         try
         {
@@ -87,7 +90,7 @@ public class HuelgaRestController
             }
            
             // Creamos la entidad
-            this.crearHuelga(huelgaRequestDto, plantillaResponseDto) ;
+            this.crearHuelga(huelgaRequestDto, plantillaResponseDto, authorization) ;
             
             return ResponseEntity.ok().build() ;
         }
@@ -127,13 +130,34 @@ public class HuelgaRestController
                 log.error(Constants.ERR_HUELGA_NO_EXISTE_DESC);
                 return new StrikesServerException(Constants.ERR_HUELGA_NO_EXISTE_CODE,Constants.ERR_HUELGA_NO_EXISTE_DESC);
             });
-                   
+
+            Date hoy = new Date();
+
+	        // NO borrar si está en curso
+	        if (hoy.after(huelga.getFechaInicio()) && hoy.before(huelga.getFechaFin()))
+	        {
+	            log.error(Constants.ERR_HUELGA_EN_CURSO_DESC, huelga.getTitulo());
+	            throw new StrikesServerException(Constants.ERR_HUELGA_EN_CURSO_CODE,Constants.ERR_HUELGA_EN_CURSO_DESC);
+	        }
+	
+	        // NO borrar si ya ha finalizado
+	        if (hoy.after(huelga.getFechaFin()))
+	        {
+	            log.error(Constants.ERR_HUELGA_FINALIZA_DESC, huelga.getTitulo());
+	            throw new StrikesServerException(Constants.ERR_HUELGA_FINALIZA_CODE,Constants.ERR_HUELGA_FINALIZA_DESC);
+	        }
 
             // Llamar a Apps Script para borrar Form y Sheet
             this.borrarRecursosGoogle(huelga);
             
             // Comprobar primero si hay alumnos inscritos a esta huelga para borrar solo de la tabla relación
-            
+         // Comprobar primero si hay alumnos inscritos a esta huelga
+            if (this.alumnoHuelgaRepository.existsByAlumnoHuelgaIdTitulo(titulo))
+            {
+                log.info("Borrando relaciones alumno_huelga de la huelga {}", titulo);
+                // Borrar solo las relaciones
+                this.alumnoHuelgaRepository.deleteByAlumnoHuelgaIdTitulo(titulo);
+            }
            
             // Borramos la huelga
             this.huelgaRepository.delete(huelga);
@@ -162,11 +186,9 @@ public class HuelgaRestController
     @GetMapping("/")
     public ResponseEntity<?> obtenerHuelgas(@PageableDefault(size = 5, sort = "titulo") Pageable pageable)
     {
-
         try
         {
             Page<HuelgaResponseDto> pageHuelgaResponseDto = this.huelgaRepository.obtenerHuelgas(pageable) ;
-
             return ResponseEntity.ok(pageHuelgaResponseDto) ;
         }
         catch (Exception excepcion)
@@ -180,8 +202,6 @@ public class HuelgaRestController
             // Devolvemos el mapa con el código, mensaje y traza de excepción
             return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage()) ;
         }
-        
-
     }
     
     
@@ -267,7 +287,7 @@ public class HuelgaRestController
 	        // Convertir a DTO
 	        PlantillaResponseDto responseDto = objectMapper.readValue(rawResponse, PlantillaResponseDto.class) ;
 
-	        // Validación de negocio
+	        // Validación 
 	        if (responseDto.getGoogleFormUrl() == null) 
 	        {
 	            throw new StrikesServerException(Constants.ERR_HUELGA_NO_CREA_FORMULARIO_CODE, Constants.ERR_HUELGA_NO_CREA_FORMULARIO_DESC) ;
@@ -288,7 +308,7 @@ public class HuelgaRestController
     }
     
 
-    private void crearHuelga(HuelgaRequestDto huelgaRequestDto, PlantillaResponseDto plantillaResponseDto) throws StrikesServerException
+    private void crearHuelga(HuelgaRequestDto huelgaRequestDto, PlantillaResponseDto plantillaResponseDto, String authorization) throws StrikesServerException
     {
     	try
     	{
@@ -327,6 +347,7 @@ public class HuelgaRestController
 
     		// Persistimos la entidad en base de datos y forzamos sincronización inmediata
     		this.huelgaRepository.saveAndFlush(huelga);
+    		
     	}
     	catch (StrikesServerException exception) 
     	{
@@ -359,10 +380,10 @@ public class HuelgaRestController
             body.put("token", "MI_TOKEN_SUPER_SEGURO") ;
 
             // ID del formulario de Google a eliminar
-            body.put("formId", huelga.getGoogleFormId()) ;
+            body.put("googleFormId", huelga.getGoogleFormId()) ;
 
             // ID del spreadsheet asociado al formulario
-            body.put("spreadsheetId", huelga.getGoogleSpreadsheetId()) ;
+            body.put("googleSpreadsheetId", huelga.getGoogleSpreadsheetId()) ;
 
             // Lo convertimos a JSON
             ObjectMapper objectMapper = new ObjectMapper() ;
@@ -378,7 +399,6 @@ public class HuelgaRestController
                     .build();
             // Ejecutamos la petición
             HttpResponse<String> response =client.send(request, HttpResponse.BodyHandlers.ofString()) ;
-
             String rawResponse = response.body();
             
             log.info("Recursos Google eliminados para la huelga") ;
@@ -390,9 +410,9 @@ public class HuelgaRestController
         }
         catch (StrikesServerException exception)
         {
-        	throw exception;
-        	//log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
-            //throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+        	
+        	log.error(Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
+            throw new StrikesServerException(Constants.ERR_HUELGA_NO_ACTIVA_CODE, Constants.ERR_HUELGA_NO_ACTIVA_DESC) ;
         }
         catch (Exception exception)
         {
@@ -400,5 +420,4 @@ public class HuelgaRestController
             throw new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception) ;
         }
     }
-    
 }

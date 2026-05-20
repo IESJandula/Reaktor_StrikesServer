@@ -48,7 +48,7 @@ public class Huelga
      * Título de la huelga.
      */
     @Id
-    @Column(length = 25, nullable = false)
+    @Column(length = 100, nullable = false)
     private String titulo ;
 
     /**
@@ -106,21 +106,8 @@ public class Huelga
     private EstadoHuelga estado ;
 
     /**
-     * Última fila procesada del Google Sheet.
-     */
-    @Column
-    private Integer ultimaFilaProcesada = 0 ;
-
-    /**
      * Lista de alumnos que han respondido a la huelga.
      */
     @OneToMany(mappedBy = "huelga", fetch = FetchType.LAZY)
     private List<AlumnoHuelga> alumnos ;
-
-    /**
-     * Lista de cursos que pueden participar en la huelga.
-     */
-    @OneToMany(mappedBy = "huelga", fetch = FetchType.LAZY)
-    private List<CursoEtapaGrupoHuelga> cursos ;
-    
 }

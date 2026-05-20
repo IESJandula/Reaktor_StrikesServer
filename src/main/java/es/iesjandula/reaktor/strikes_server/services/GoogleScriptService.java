@@ -21,26 +21,22 @@ public class GoogleScriptService
     private RestTemplate restTemplate = new RestTemplate();
 
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> obtenerRespuestas(String spreadsheetId, String sheetName)
+	public List<Map<String, Object>> obtenerRespuestas(String spreadsheetId, String sheetName)
     {
         try
         {
-            String url = scriptCreacionConsultaHuelga + "?spreadsheetId=" + spreadsheetId  + "&sheet=" + sheetName ;
+            String url = scriptCreacionConsultaHuelga + "?spreadsheetId=" + spreadsheetId + "&sheet=" + sheetName ;
 
-            // Leer como objeto JSON
-            List<Map<String, Object>> response = restTemplate.getForObject(url, List.class);
+            List<Map<String, Object>> response = restTemplate.getForObject(url, List.class) ;
 
-            if (response == null)
-            {
-                return Collections.emptyList();
+            log.info("RESPUESTA GOOGLE {}", response) ;
+
+            return response ;
             }
-
-            return response;
+            catch (Exception exception)
+            {
+                log.error(Constants.ERR_HUELGA_DESC, exception) ;
+                return Collections.emptyList() ;
+            }
         }
-        catch (Exception exception)
-        {
-            log.error(Constants.ERR_HUELGA_DESC, exception);
-            return Collections.emptyList();
-        }
-    }
 }

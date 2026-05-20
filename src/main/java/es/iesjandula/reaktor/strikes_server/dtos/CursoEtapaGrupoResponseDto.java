@@ -22,7 +22,7 @@ public class CursoEtapaGrupoResponseDto
      * Número de curso.
      * Identifica de forma única el curso enviado en la respuesta.
      */
-    private Integer curso;
+    private String curso;
     
     /**
      * Etapa de curso.

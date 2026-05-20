@@ -1,5 +1,6 @@
 package es.iesjandula.reaktor.strikes_server.scheduler;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -8,9 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import es.iesjandula.reaktor.strikes_server.models.Alumno;
 import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
+import es.iesjandula.reaktor.strikes_server.repository.IAlumnoRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
+import es.iesjandula.reaktor.strikes_server.services.AlumnoHuelgaService;
 import es.iesjandula.reaktor.strikes_server.services.GoogleScriptService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,126 +23,121 @@ import lombok.extern.slf4j.Slf4j;
 public class HuelgaScheduler
 {
     @Autowired
-    private IHuelgaRepository huelgaRepository;
+    private IHuelgaRepository huelgaRepository ;
+    
+    @Autowired
+    private IAlumnoRepository alumnoRepository;
+    
+    @Autowired
+    private AlumnoHuelgaService alumnoHuelgaService ;
 
     @Autowired
-    private GoogleScriptService googleScriptService;
+    private GoogleScriptService googleScriptService ;
 
     /**
      * Se ejecuta cada hora
      */
     @Scheduled(cron = "0 0 * * * *")
+
     public void actualizarEstadosHuelga()
     {
-        log.info("Iniciando scheduler de huelgas...");
+        log.info("Iniciando scheduler de huelgas...") ;
 
-        Date hoy = new Date();
-        List<Huelga> huelgas = huelgaRepository.findByEstado(EstadoHuelga.CONVOCADA);
+        Date hoy = new Date() ;
+        // Buscamos las huelgas que solo estan Convocadas
+        List<Huelga> huelgas = huelgaRepository.findByEstado(EstadoHuelga.CONVOCADA) ;
 
         for (Huelga huelga : huelgas)
         {
             try
             {
-                actualizarEstado(huelga, hoy);
-
+                actualizarEstado(huelga, hoy) ;
                 if (huelga.getEstado() == EstadoHuelga.CONVOCADA)
                 {
-                    procesarRespuestas(huelga);
+                    procesarRespuestas(huelga) ;
                 }
             }
-
             catch (Exception exception)
             {
-                log.error("Error procesando huelga ID " + huelga.getTitulo()+ " : " + exception.getMessage());
-
+                log.error("Error procesando huelga ID " + huelga.getTitulo()+ " : " + exception.getMessage()) ;
             }
         }
-
-        huelgaRepository.saveAll(huelgas);
-
-        log.info("Scheduler finalizado.");
+        huelgaRepository.saveAll(huelgas) ;
+        log.info("Scheduler finalizado.") ;
     }
 
-    // ==========================================
     // Actualizar estado si ha finalizado
-    // ==========================================
     private void actualizarEstado(Huelga huelga, Date hoy)
     {
-        if (huelga.getFechaFin() != null &&huelga.getFechaFin().before(hoy) && huelga.getEstado() == EstadoHuelga.CONVOCADA)
+        if (huelga.getFechaFin() != null)
+        {
+        	return ;
+        }
+        Calendar calendarioHoy = Calendar.getInstance();
+        calendarioHoy.setTime(hoy);
+
+        calendarioHoy.set(Calendar.HOUR_OF_DAY, 0);
+        calendarioHoy.set(Calendar.MINUTE, 0);
+        calendarioHoy.set(Calendar.SECOND, 0);
+        calendarioHoy.set(Calendar.MILLISECOND, 0);
+
+        Calendar calendarioFin = Calendar.getInstance();
+        calendarioFin.setTime(huelga.getFechaFin());
+
+        calendarioFin.set(Calendar.HOUR_OF_DAY, 0);
+        calendarioFin.set(Calendar.MINUTE, 0);
+        calendarioFin.set(Calendar.SECOND, 0);
+        calendarioFin.set(Calendar.MILLISECOND, 0);
+        
+        // Si hoy es el mismo día o posterior → FINALIZADA
+        if (!calendarioHoy.before(calendarioFin) && huelga.getEstado() == EstadoHuelga.CONVOCADA)
         {
             huelga.setEstado(EstadoHuelga.FINALIZADA);
-            log.info("Huelga " + huelga.getTitulo() + "finalizada automáticamente");
+            log.info("Huelga {} finalizada automáticamente", huelga.getTitulo()) ;
         }
     }
 
-    // ==========================================
     // Procesar respuestas nuevas
-    // ==========================================
     private void procesarRespuestas(Huelga huelga)
     {
         if (huelga.getGoogleSpreadsheetId() == null || huelga.getGoogleSheetName() == null)
         {
-            log.warn("Huelga {} sin recursos Google configurados", huelga.getTitulo());
-            return;
+            log.info("Huelga {} sin recursos Google configurados", huelga.getTitulo()) ;
+            return ;
         }
 
-        List<Map<String, Object>> respuestas = googleScriptService.obtenerRespuestas( huelga.getGoogleSpreadsheetId(), huelga.getGoogleSheetName());
+        List<Map<String, Object>> respuestas = googleScriptService.obtenerRespuestas(huelga.getGoogleSpreadsheetId(), huelga.getGoogleSheetName()) ;
+        log.info("Procesando {} respuestas para huelga {}", respuestas.size(), huelga.getTitulo()) ;
 
-        if (respuestas.isEmpty())
+        for (Map<String, Object> respuesta : respuestas)
         {
-            log.info("No hay respuestas nuevas para la huelga {}", huelga.getTitulo());
-            return;
-        }
-
-        int ultimaFilaProcesada = huelga.getUltimaFilaProcesada() != null ? huelga.getUltimaFilaProcesada() : 0;
-
-        log.info("Procesando respuestas desde fila {} hasta {} para huelga {}", ultimaFilaProcesada, respuestas.size(), huelga.getTitulo());
-
-        for (int i = ultimaFilaProcesada; i < respuestas.size(); i++)
-        {
-            Map<String, Object> respuesta = respuestas.get(i);
-
-            if (respuesta.get("Correo electrónico") == null)
+            if (respuesta.get("Dirección de correo electrónico") == null)
             {
-                log.warn("Fila {} sin email, se ignora", i);
-                continue;
+                continue ;
             }
 
-            String email = ((String) respuesta.get("Correo electrónico")).toLowerCase().trim();
-
-            String decision = (String) respuesta.get("¿Te inscribes en la huelga?");
-
-            if (correoYaRegistrado(huelga, email))
+            String email = ((String) respuesta.get("Dirección de correo electrónico")).toLowerCase().trim() ;
+            String decision = (String) respuesta.get("¿Te inscribes en la huelga?") ;
+            boolean participa = parseDecision(decision) ;
+            Alumno alumno = alumnoRepository.findById(email).orElse(null) ;
+            if (alumno == null)
             {
-                log.info("Alumno {} ya registrado en huelga {}", email, huelga.getTitulo());
-                continue;
+                log.error("Alumno no encontrado en BD: {}", email);
+                continue ;
             }
-
-            log.info("Nueva inscripción detectada → {} ({})", email, decision);
-
-            procesarInscripcion(huelga, email, decision);
+            log.info("Procesando → {} ({})", email, participa) ;
+            alumnoHuelgaService.registrarOActualizar(huelga, alumno, participa) ;
         }
-
-        huelga.setUltimaFilaProcesada(respuestas.size());
-
-        log.info("Actualizada última fila procesada a {} para huelga {}", respuestas.size(), huelga.getTitulo());
     }
 
-    // ==========================================
     // Métodos auxiliares
-    // ==========================================
-    private boolean correoYaRegistrado(Huelga huelga, String email)
+
+    private boolean parseDecision(String decision)
     {
-        // TODO: Implementar consulta real a BD
-        return false;
-    }
+        if (decision == null) return false;
 
-    private void procesarInscripcion(Huelga huelga, String email, String decision)
-    {
+        decision = decision.toLowerCase().trim();
 
-        log.info("Nueva inscripción en huelga " + huelga.getTitulo()+" : " + email +" ", decision);
-
-        // TODO: Guardar en BD
-
+        return decision.equals("sí") || decision.equals("si") ;
     }
 }

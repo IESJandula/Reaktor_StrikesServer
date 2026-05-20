@@ -2,11 +2,9 @@ package es.iesjandula.reaktor.strikes_server.models.ids;
 
 import java.io.Serializable;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
 /**
  * Clave primaria compuesta para la entidad CursoEtapaGrupo.
@@ -16,28 +14,33 @@ import lombok.Setter;
  * - etapa
  * - grupo
  */
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 @Embeddable
 public class CursoEtapaGrupoId implements Serializable
 {
-
-    private static final long serialVersionUID = 1L;
-
     /**
-     * Curso 
+	 * Serial version UID para garantizar la compatibilidad durante la serialización.
+	 */
+	private static final long serialVersionUID = -1460415907859275226L;
+
+	/**
+     * Número de curso.
+     * Forma parte de la clave primaria compuesta.
      */
+    @Column
     private String curso;
 
-    /**
-     * Etapa educativa 
+	/**
+     * Etapa del curso.
+     * Forma parte de la clave primaria compuesta.
      */
+    @Column(length = 50)
     private String etapa;
 
     /**
-     * Grupo 
+     * Grupo al que pertenece el curso
+     * Forma parte de la clave primaria compuesta.
      */
+    @Column(length = 2)
     private String grupo;
 }

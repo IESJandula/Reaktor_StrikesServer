@@ -13,7 +13,7 @@ function doPost(e) {
   }
 
   // ==============================
-  // Validar token
+  // VALIDAR TOKEN SECRETO
   // ==============================
   const SECRET = "MI_TOKEN_SUPER_SEGURO";
 
@@ -23,37 +23,52 @@ function doPost(e) {
       error: "No autorizado"
     });
   }
-
-  if (!data.formId || !data.spreadsheetId) {
-    return jsonResponse({
-      error: "Faltan formId o spreadsheetId"
-    });
+  const titulo = data.titulo;
+  if (!titulo) {
+    return jsonResponse({ success: false, error: "Falta el título para buscar los archivos" });
   }
-
   try {
+    // Definimos los nombres exactos tal cual se crearon en tu primer script
+    const nombreForm = "Inscripción Huelga " + titulo;
+    const nombreSheet = "Inscripción Huelga " + titulo + " (respuestas)";
 
-    const formFile = DriveApp.getFileById(data.formId);
-    const sheetFile = DriveApp.getFileById(data.spreadsheetId);
+    let encontrados = [];
 
-    if (!formFile.isTrashed()) {
-      formFile.setTrashed(true);
-    }
+    // Función interna para buscar y borrar
+    const buscarYBorrar = (nombreArchivo) => {
+      const files = DriveApp.getFilesByName(nombreArchivo);
+      while (files.hasNext()) {
+        const file = files.next();
+        file.setTrashed(true);
+        encontrados.push(nombreArchivo + " (ID: " + file.getId() + ")");
+      }
+    };
+    // Ejecutar búsqueda y borrado para ambos
+    buscarYBorrar(nombreForm);
+    buscarYBorrar(nombreSheet);
 
-    if (!sheetFile.isTrashed()) {
-      sheetFile.setTrashed(true);
+    if (encontrados.length === 0) {
+      return jsonResponse({
+        success: false,
+        message: "No se encontraron archivos con esos títulos"
+      });
     }
 
     return jsonResponse({
       success: true,
-      message: "Recursos enviados a la papelera correctamente"
+      message: "Archivos enviados a la papelera",
+      detalles: encontrados
     });
-
   } catch (error) {
 
     return jsonResponse({
       success: false,
-      error: "Error interno",
+      error: "Error durante la búsqueda/borrado",
       details: error.toString()
     });
   }
+}
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
