@@ -21,6 +21,7 @@ import es.iesjandula.reaktor.strikes_server.models.EstadoHuelga;
 import es.iesjandula.reaktor.strikes_server.models.Huelga;
 import es.iesjandula.reaktor.strikes_server.repository.IAlumnoHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IAlumnoRepository;
+import es.iesjandula.reaktor.strikes_server.repository.ICursoEtapaGrupoRepository;
 import es.iesjandula.reaktor.strikes_server.repository.IHuelgaRepository;
 import es.iesjandula.reaktor.strikes_server.services.AlumnoHuelgaService;
 import es.iesjandula.reaktor.strikes_server.utils.Constants;
@@ -45,6 +46,9 @@ public class AlumnoHuelgaRestController
 
     @Autowired
     private IAlumnoHuelgaRepository alumnoHuelgaRepository;
+    
+    @Autowired
+    private ICursoEtapaGrupoRepository cursoEtapaGrupoRepository; 
     
     @Autowired
     private AlumnoHuelgaService alumnoHuelgaService;
@@ -91,6 +95,13 @@ public class AlumnoHuelgaRestController
             // Devolvemos el mapa con el código, mensaje y traza de excepción
             return ResponseEntity.status(500).body(strikesServerException.getBodyExceptionMessage());
         }
+    }
+    
+    @PreAuthorize("hasAnyRole('"+BaseConstants.ROLE_PROFESOR+"')")
+    @GetMapping("/cursos")
+    public ResponseEntity<?> obtenerCursos()
+    {
+        return ResponseEntity.ok(this.cursoEtapaGrupoRepository.obtenerCombinaciones());
     }
     
     /**

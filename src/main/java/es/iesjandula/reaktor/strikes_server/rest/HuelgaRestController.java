@@ -24,13 +24,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import es.iesjandula.reaktor.base.security.models.DtoUsuarioExtended;
 import es.iesjandula.reaktor.base.utils.BaseConstants;
-import es.iesjandula.reaktor.strikes_server.dtos.EventoHuelgaResquestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaRequestDto;
 import es.iesjandula.reaktor.strikes_server.dtos.HuelgaResponseDto;
 import es.iesjandula.reaktor.strikes_server.dtos.PlantillaResponseDto;
@@ -54,8 +52,6 @@ public class HuelgaRestController
     private IHuelgaRepository huelgaRepository;
     @Autowired
     private IAlumnoHuelgaRepository alumnoHuelgaRepository;
-    @Autowired
-    private WebClient.Builder webClientBuilder;
     
 	/** URL permitida de CORS */
 	@Value("${reaktor.scriptCreacionConsultaHuelga}")
@@ -165,9 +161,6 @@ public class HuelgaRestController
            
             // Borramos la huelga
             this.huelgaRepository.delete(huelga);
-            
-            // Eliminar evento del calendario
-            this.borrarEventoCalendario(huelga);
 
             // Devolvemos la respuesta
             return ResponseEntity.ok().build();
@@ -355,8 +348,6 @@ public class HuelgaRestController
     		// Persistimos la entidad en base de datos y forzamos sincronización inmediata
     		this.huelgaRepository.saveAndFlush(huelga);
     		
-    		// Crear evento en calendario
-    		this.crearEventoCalendario(huelga, authorization);
     	}
     	catch (StrikesServerException exception) 
     	{
@@ -428,42 +419,5 @@ public class HuelgaRestController
             log.error(Constants.ERR_SERVIDOR, exception) ;
             throw new StrikesServerException(Constants.ERR_SERVIDOR_CODE, Constants.ERR_SERVIDOR, exception) ;
         }
-    }
-    
-    /**
-     * Comunica la huelga al microservicio de eventos
-     * para que aparezca en el calendario.
-     */
-    private void crearEventoCalendario(Huelga huelga, String authorization)
-    {
-    	 EventoHuelgaResquestDto eventoHuelgaRequestDto = new EventoHuelgaResquestDto(
-    		            huelga.getTitulo(),
-    		            huelga.getFechaInicio().getTime(),
-    		            huelga.getFechaFin().getTime());
-
-    		    webClientBuilder.build()
-    		        .post()
-    		        .uri("http://localhost:8082/events/manager/huelga")
-    		        .header("Authorization", authorization)
-    		        .bodyValue(eventoHuelgaRequestDto)
-    		        .retrieve()
-    		        .bodyToMono(Void.class)
-    		        .block();
-    }
-    
-    /**
-     * Elimina el evento asociado a la huelga
-     * del microservicio de eventos.
-     */
-    private void borrarEventoCalendario(Huelga huelga)
-    {
-        webClientBuilder.build()
-            .delete()
-            .uri("http://localhost:8082/events/manager/")
-            .header("titulo", huelga.getTitulo())
-            .header("fechaInicio", String.valueOf(huelga.getFechaInicio().getTime()))
-            .retrieve()
-            .bodyToMono(Void.class)
-            .block();
     }
 }

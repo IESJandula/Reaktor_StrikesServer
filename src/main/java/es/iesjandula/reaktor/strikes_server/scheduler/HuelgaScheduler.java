@@ -1,5 +1,6 @@
 package es.iesjandula.reaktor.strikes_server.scheduler;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -68,10 +69,31 @@ public class HuelgaScheduler
     // Actualizar estado si ha finalizado
     private void actualizarEstado(Huelga huelga, Date hoy)
     {
-        if (huelga.getFechaFin() != null &&huelga.getFechaFin().before(hoy) && huelga.getEstado() == EstadoHuelga.CONVOCADA)
+        if (huelga.getFechaFin() != null)
         {
-            huelga.setEstado(EstadoHuelga.FINALIZADA) ;
-            log.info("Huelga " + huelga.getTitulo() + "finalizada automáticamente") ;
+        	return ;
+        }
+        Calendar calendarioHoy = Calendar.getInstance();
+        calendarioHoy.setTime(hoy);
+
+        calendarioHoy.set(Calendar.HOUR_OF_DAY, 0);
+        calendarioHoy.set(Calendar.MINUTE, 0);
+        calendarioHoy.set(Calendar.SECOND, 0);
+        calendarioHoy.set(Calendar.MILLISECOND, 0);
+
+        Calendar calendarioFin = Calendar.getInstance();
+        calendarioFin.setTime(huelga.getFechaFin());
+
+        calendarioFin.set(Calendar.HOUR_OF_DAY, 0);
+        calendarioFin.set(Calendar.MINUTE, 0);
+        calendarioFin.set(Calendar.SECOND, 0);
+        calendarioFin.set(Calendar.MILLISECOND, 0);
+        
+        // Si hoy es el mismo día o posterior → FINALIZADA
+        if (!calendarioHoy.before(calendarioFin) && huelga.getEstado() == EstadoHuelga.CONVOCADA)
+        {
+            huelga.setEstado(EstadoHuelga.FINALIZADA);
+            log.info("Huelga {} finalizada automáticamente", huelga.getTitulo()) ;
         }
     }
 
