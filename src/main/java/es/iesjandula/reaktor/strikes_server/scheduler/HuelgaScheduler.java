@@ -37,8 +37,8 @@ public class HuelgaScheduler
     /**
      * Se ejecuta cada hora
      */
-    //@Scheduled(cron = "0 0 * * * *")
-    @Scheduled(cron = "0 */1 * * * *")
+    @Scheduled(cron = "0 0 * * * *")
+
     public void actualizarEstadosHuelga()
     {
         log.info("Iniciando scheduler de huelgas...") ;
